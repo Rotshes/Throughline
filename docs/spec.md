@@ -3,6 +3,7 @@
 Module 10, five parts. This is the primary work product. The code is generated
 from it; when the output is wrong, this gets fixed first and the code rebuilt.
 
+Version 1.2 — adds the decline outcome (7a) and the two-to-five game rule (7b).
 Version 1.1 — adds the newcomer path and the candidate-source progression.
 
 ---
@@ -51,6 +52,16 @@ disagree about whether it was met.
    a recommendation drawn from the candidate set.
 7. The recommended title exists in the candidate set. A response naming anything
    else is rejected, retried once, then shown as a failure.
+7a. **The matching stage can decline.** Its output carries an outcome of either
+   `recommended` or `no_good_fit`. A `recommended` outcome must name a title from
+   the candidate set and list at least one motif it satisfies. A `no_good_fit`
+   outcome may name the closest candidate or none, must list no satisfied motifs,
+   and must say what the candidate set is missing. The interface shows a decline
+   as a decline, never as a weak recommendation.
+7b. **Path A requires between two and five games.** Fewer than two is rejected by
+   the form, before any model call is made. A single game cannot produce a motif
+   that satisfies criterion 3, so calling the model would spend money on a request
+   that cannot succeed.
 
 **Reliability and record**
 
@@ -82,7 +93,8 @@ Boundaries the agent must respect. Interior design is the agent's to choose.
 **Stage 1 — produce motifs.** Two paths, one output.
 
 - *Path A, played games.* The analysis call takes two to five games the user has
-  played and enjoyed, and returns motifs. It is given nothing else.
+  played and enjoyed, and returns motifs. It is given nothing else. The count is
+  checked before the call, not after — see criterion 7b.
 - *Path B, preference questions.* A fixed set of questions about atmosphere,
   pace, and what the person wants to feel. Their answers go to a call that
   returns motifs in the same schema.
@@ -103,7 +115,8 @@ it is what stops the newcomer path becoming a second product.
 | 3 | The user's Steam library: owned games with zero playtime are the backlog |
 
 **Stage 3 — matching.** The matching call takes the motifs and the candidate set
-and returns one title and a rationale.
+and returns either one title with a rationale and the motifs it satisfies, or a
+decline saying nothing in the set fits. See criterion 7a.
 
 ### Why stages 1 and 3 are separate calls
 
