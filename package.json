@@ -1,0 +1,16 @@
+{
+  "name": "throughline",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Works out what someone wants from a game and picks one title from a candidate set.",
+  "scripts": {
+    "analyse": "node scripts/run-analysis.js",
+    "check": "node scripts/check-validation.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "dotenv": "^16.4.5"
+  }
+}
