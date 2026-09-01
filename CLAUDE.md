@@ -109,7 +109,22 @@ why I chose it. Ask.
 
 One line each, added as they happen. Written once, permanently.
 
-* (none recorded yet — the expected ones are in `docs/spec.md` part 5)
+* **A prompt cannot reference a file the model cannot read.** All three prompts
+  said "conforming to `schemas/motifs.schema.json`" and the model guessed the
+  shape wrong — a bare array instead of an object, and `game` where the schema
+  says `source`. Any shape a model must produce goes in the prompt text in full,
+  with the exact field names and the keys that will be rejected. (Turn 001)
+* **Model identifiers go stale.** A retired or misspelled id returns HTTP 404
+  "no endpoints found". The id lives in the environment, never in code. Current
+  list: https://openrouter.ai/api/v1/models (Turn 001)
+* **A gate can pass for the wrong reason.** The injection test originally paired
+  the malicious title with one unrelated game, so zero motifs was the right
+  answer regardless of whether the instruction was resisted. Before trusting a
+  gate, ask what result would look like a pass while the thing being tested had
+  failed. (Turn 001)
+* **A stale result looks exactly like a fresh one.** A repeated run was caught
+  only because its logged latency matched the previous one to the millisecond.
+  Read the per-call figures, not just the output. (Turn 001)
 
 ## Conventions
 
