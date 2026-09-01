@@ -1,7 +1,10 @@
 # Preferences prompt — stage 1, path B
 
-version: 1.0
+version: 1.1
 Change this header in place when the text changes, so `git diff` shows what moved.
+
+v1.1 — the output section now states the shape in full. v1.0 referred to a schema
+file, which the model cannot read.
 
 ---
 
@@ -43,5 +46,28 @@ ANSWERS>>>
 
 ## Output
 
-Return only JSON conforming to `schemas/motifs.schema.json`. No prose before it,
-none after it, no code fences.
+Return one JSON object. Not an array — an object with a single key `motifs`
+whose value is the array.
+
+Exactly these field names. `source`, not `question`.
+
+```
+{
+  "motifs": [
+    {
+      "name": "short label, 3 to 60 characters, not a word from the answers",
+      "description": "what this motif is, 20 to 400 characters",
+      "evidence": [
+        { "source": "the question id, such as q_tone", "detail": "which answer led here and why, 10 to 300 characters" }
+      ]
+    }
+  ]
+}
+```
+
+Zero motifs is written as `{"motifs": []}`.
+
+No other keys anywhere. Any key not listed above will cause the response to be
+rejected.
+
+No prose before the JSON, none after it, no code fences.

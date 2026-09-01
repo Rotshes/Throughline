@@ -1,7 +1,10 @@
 # Analysis prompt — stage 1, path A
 
-version: 1.0
+version: 1.1
 Change this header in place when the text changes, so `git diff` shows what moved.
+
+v1.1 — the output section now states the shape in full. v1.0 referred to a schema
+file, which the model cannot read; it guessed the field names and guessed wrong.
 
 ---
 
@@ -48,5 +51,28 @@ GAMES>>>
 
 ## Output
 
-Return only JSON conforming to `schemas/motifs.schema.json`. No prose before it,
-none after it, no code fences.
+Return one JSON object. Not an array — an object with a single key `motifs`
+whose value is the array.
+
+Exactly these field names. `source`, not `game`.
+
+```
+{
+  "motifs": [
+    {
+      "name": "short label, 3 to 60 characters",
+      "description": "what this motif is, 20 to 400 characters",
+      "evidence": [
+        { "source": "a game title exactly as it was given to you", "detail": "a specific concrete detail from that game, 10 to 300 characters" }
+      ]
+    }
+  ]
+}
+```
+
+Zero motifs is written as `{"motifs": []}`.
+
+No other keys anywhere. No `confidence`, no `score`, no `reasoning`, no
+`summary`. Any key not listed above will cause the response to be rejected.
+
+No prose before the JSON, none after it, no code fences.

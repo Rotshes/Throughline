@@ -1,7 +1,10 @@
 # Matching prompt — stage 3
 
-version: 1.0
+version: 1.1
 Change this header in place when the text changes, so `git diff` shows what moved.
+
+v1.1 — the output section now states the shape in full. v1.0 referred to a schema
+file, which the model cannot read.
 
 ---
 
@@ -56,5 +59,24 @@ MOTIFS>>>
 
 ## Output
 
-Return only JSON conforming to `schemas/recommendation.schema.json`. No prose
-before it, none after it, no code fences.
+Return one JSON object with exactly these four keys:
+
+```
+{
+  "outcome": "recommended" | "no_good_fit",
+  "title": "a title copied exactly from the candidate list, or null when declining",
+  "rationale": "why it fits, or what the set is missing, 40 to 1200 characters",
+  "satisfies": ["motif names copied exactly as given to you"]
+}
+```
+
+When `outcome` is `"recommended"`: `title` must be a real candidate title and
+`satisfies` must name at least one motif.
+
+When `outcome` is `"no_good_fit"`: `satisfies` must be empty, and `title` is
+either the closest candidate or `null`.
+
+No other keys anywhere. Any key not listed above will cause the response to be
+rejected.
+
+No prose before the JSON, none after it, no code fences.
