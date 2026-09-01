@@ -1,0 +1,85 @@
+{
+  "$comment": "Turn 1 candidate set. Every `feel` line is written by hand. Aim for 15-20 games you know well rather than 40 you half-know. A `feel` line should say what playing it is actually like, not what genre it is: if the sentence would still be true of ten other games, it is not specific enough.",
+  "candidates": [
+    {
+      "title": "Outer Wilds",
+      "feel": "A clockwork solar system where knowledge is your only upgrade, driven by the bittersweet inevitability of an ending you cannot fight."
+    },
+    {
+      "title": "Vampire Survivors",
+      "feel": "A slot machine disguised as an action game where your only input is movement, culminating in a hypnotic screen-clearing light show of passive destruction."
+    },
+    {
+      "title": "Death Stranding",
+      "feel": "A quiet, punishing hike across a ruined landscape where the terrain itself is the main antagonist, making the eventual appearance of a smooth road feel like a miracle."
+    },
+    {
+      "title": "Stardew Valley",
+      "feel": "A self-directed second life of agricultural routine and gentle community building, where the only pressure is the sun going down."
+    },
+    {
+      "title": "Doom Eternal",
+      "feel": "A breakneck resource puzzle where you must aggressively dismantle enemies in specific ways to stay alive, treating demons as health and ammo piñatas."
+    },
+    {
+      "title": "Return of the Obra Dinn",
+      "feel": "An uncompromising logic grid of tragedy where you piece together a frozen diorama of betrayals, relying entirely on your own deduction with zero hand-holding."
+    },
+    {
+      "title": "Civilization VI",
+      "feel": "A methodical, multi-hour balancing act of city planning and historical arms races, where 'one more turn' becomes a hypnotic loop of long-term investments paying off."
+    },
+    {
+      "title": "Hades",
+      "feel": "A blistering cycle of failure and rebirth where dying feels like progress because every return to the hub rewards you with unraveling family drama and permanent strength."
+    },
+    {
+      "title": "Celeste",
+      "feel": "A grueling but encouraging mountain climb of precise platforming, where hundreds of rapid-fire deaths are meant to teach you the exact rhythm of a room."
+    },
+    {
+      "title": "Disco Elysium",
+      "feel": "A chaotic argument inside your own head where failing a dice roll often leads to a more interesting story than succeeding, wrapped in a melancholic murder mystery."
+    },
+    {
+      "title": "Bloodborne",
+      "feel": "A terrifying descent into gothic madness that forces you to abandon defensive habits, rewarding hyper-aggression and calculated risks to regain lost health."
+    },
+    {
+      "title": "Factorio",
+      "feel": "An ever-expanding logistical headache where fixing one bottleneck inevitably creates two more, transforming a barren alien world into a symphony of automated conveyor belts."
+    },
+    {
+      "title": "Slay the Spire",
+      "feel": "A tightrope walk of short-term survival against long-term mathematical efficiency, where every card added feels like both a lifeline and a potential future liability."
+    },
+    {
+      "title": "Subnautica",
+      "feel": "A beautiful, terrifying plunge into an alien ocean that masterfully shifts from serene resource gathering in the shallows to crushing, claustrophobic dread in the deep."
+    },
+    {
+      "title": "Red Dead Redemption 2",
+      "feel": "A deliberately paced, methodical immersion into a dying era, where the weight of your animations and the mundane chores ground a sprawling, tragic outlaw epic."
+    },
+    {
+      "title": "Tetris Effect",
+      "feel": "A familiar spatial organization task elevated into a synesthetic trance, where clearing lines pulses in time with a soaring electronic soundtrack."
+    },
+    {
+      "title": "Planet Coaster",
+      "feel": "A joyous, blank-canvas construction kit where managing the nausea and queuing times of thousands of guests is secondary to designing the perfect, needlessly elaborate roller coaster."
+    },
+    {
+      "title": "Hollow Knight",
+      "feel": "A lonely, melancholic descent through a ruined bug kingdom, requiring you to physically map a labyrinth in your head while mastering precise, unforgiving combat."
+    },
+    {
+      "title": "Portal 2",
+      "feel": "A comedic physics playground that teaches you to think in spatial paradoxes, rewarding 'aha' moments of momentum manipulation with biting corporate satire."
+    },
+    {
+      "title": "Journey",
+      "feel": "A silent, sand-swept pilgrimage that strips away complex mechanics to foster an unspoken, emotional bond with a completely anonymous stranger sharing your path."
+    }
+  ]
+}
