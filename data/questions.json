@@ -1,0 +1,30 @@
+{
+  "$comment": "Path B's fixed questions for turn 1. These are Claude's drafts — rewrite them in your own words. The test for a good question: it asks about how the person wants to FEEL or what they want to DO, never about genre, platform, or mechanics. A question whose answer names a genre has failed. The `id` values are used as evidence sources in the motif schema, so do not change an id once it has been used in a committed reference case.",
+  "questions": [
+    {
+      "id": "q_tone",
+      "question": "Do you want to feel tense, or relaxed?",
+      "options": ["Tense", "Relaxed", "Somewhere between"]
+    },
+    {
+      "id": "q_company",
+      "question": "Would you rather be alone in the world, or surrounded by people and activity?",
+      "options": ["Alone", "Surrounded", "Doesn't matter"]
+    },
+    {
+      "id": "q_session",
+      "question": "Do you want something you can put down after ten minutes, or something you sink an evening into?",
+      "options": ["Ten minutes", "A whole evening", "Either"]
+    },
+    {
+      "id": "q_demand",
+      "question": "Do you want to be tested, or carried?",
+      "options": ["Tested", "Carried", "A bit of both"]
+    },
+    {
+      "id": "q_novelty",
+      "question": "Do you want something familiar and comfortable, or something strange you have to work out?",
+      "options": ["Familiar", "Strange", "No preference"]
+    }
+  ]
+}
