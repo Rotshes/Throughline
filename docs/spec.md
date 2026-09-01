@@ -3,6 +3,7 @@
 Module 10, five parts. This is the primary work product. The code is generated
 from it; when the output is wrong, this gets fixed first and the code rebuilt.
 
+Version 1.3 — adds pitfalls 11-13 from turn 001.
 Version 1.2 — adds the decline outcome (7a) and the two-to-five game rule (7b).
 Version 1.1 — adds the newcomer path and the candidate-source progression.
 
@@ -207,5 +208,16 @@ Written once, permanently. Each is a failure expected in advance.
 10. **A motif that names no evidence is meaningless.** "Engaging gameplay" will
     appear. The evidence requirement exists so code can discard it rather than
     taste.
-11. **The model will agree with a suggestion rather than correct it.** Do not ask
+11. **A prompt that names a schema file gets guessed at.** The model cannot read
+    the repository. Every shape it must produce belongs in the prompt text, with
+    the exact field names. Observed in turn 001: a referenced schema produced a
+    bare array with a `game` field instead of an object with `source`.
+12. **No gate checks whether the evidence is factually true.** Criterion 3
+    verifies that a motif cites two input games with a specific detail; it cannot
+    verify the detail is correct. A confident invented claim about a game passes
+    every check in this project. The only check is a person who knows the games
+    reading the output, and that does not scale.
+13. **Model identifiers go stale.** A retired or misspelled id returns HTTP 404.
+    Keep it in the environment so a change is configuration, not a code edit.
+14. **The model will agree with a suggestion rather than correct it.** Do not ask
     it whether its own motifs were good.
