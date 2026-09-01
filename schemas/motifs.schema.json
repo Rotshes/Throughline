@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "throughline/schemas/motifs.schema.json",
+  "title": "Motifs",
+  "description": "Output of stage 1. Produced either from games the user has played (path A) or from their answers to the preference questions (path B). Stage 3 consumes this and must not be able to tell which path produced it.",
+  "$comment": "Path A additionally requires each motif's evidence to name at least two DISTINCT game sources. That rule is deliberately NOT in this schema, because the same schema is shared with path B where there are no games to cite. It is enforced in code. See spec.md criteria 2 and 3.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["motifs"],
+  "properties": {
+    "motifs": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 4,
+      "description": "Zero motifs is a valid and expected answer, meaning no shared throughline could be identified. The app must never manufacture a connection to fill this array. See spec.md part 5, pitfall 1.",
+      "items": { "$ref": "#/definitions/motif" }
+    }
+  },
+  "definitions": {
+    "motif": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "description", "evidence"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 60,
+          "description": "Short label for the motif. Should describe how something feels or what the player is doing, not a genre."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 20,
+          "maxLength": 400,
+          "description": "What this motif is, in plain language."
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "description": "What this motif is drawn from. A motif that cannot point at anything is meaningless — see spec.md part 5, pitfall 10.",
+          "items": { "$ref": "#/definitions/evidenceItem" }
+        }
+      }
+    },
+    "evidenceItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "detail"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A game title on path A, or a question identifier on path B."
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 300,
+          "description": "The specific thing in that source which supports the motif. Not a restatement of the motif name."
+        }
+      }
+    }
+  }
+}

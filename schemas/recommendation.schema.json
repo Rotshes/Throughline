@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "throughline/schemas/recommendation.schema.json",
+  "title": "Recommendation",
+  "description": "Output of stage 3. One title from the candidate set, or an honest statement that nothing in the set fits.",
+  "$comment": "Two rules are enforced in code rather than here. First, `title` must exactly match a title in data/candidates.json — see spec.md criterion 7. Second, every entry in `satisfies` must match the name of a motif actually returned by stage 1; the model must not invent motifs at this stage.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["outcome", "title", "rationale", "satisfies"],
+  "properties": {
+    "outcome": {
+      "type": "string",
+      "enum": ["recommended", "no_good_fit"],
+      "description": "Use `no_good_fit` when nothing in the candidate set genuinely matches the motifs. Forcing a match is a failure — see reference case 4."
+    },
+    "title": {
+      "type": ["string", "null"],
+      "description": "The recommended game. On `no_good_fit` this may name the closest candidate, or be null if nothing is close enough to be worth naming."
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 40,
+      "maxLength": 1200,
+      "description": "Why this game fits the motifs. On `no_good_fit`, what the candidate set is missing."
+    },
+    "satisfies": {
+      "type": "array",
+      "minItems": 0,
+      "description": "Names of the stage 1 motifs this game satisfies. Empty on `no_good_fit`. Lets the rationale be checked against the motifs rather than read as generic praise.",
+      "items": { "type": "string" }
+    }
+  },
+  "allOf": [
+    {
+      "$comment": "A recommendation must name a game and satisfy at least one motif.",
+      "if": { "properties": { "outcome": { "const": "recommended" } } },
+      "then": {
+        "properties": {
+          "title": { "type": "string", "minLength": 1 },
+          "satisfies": { "minItems": 1 }
+        }
+      }
+    }
+  ]
+}
