@@ -1,5 +1,5 @@
-import fs from "node:fs";
 import { config } from "./config.js";
+import { loadPrompt } from "./prompt.js";
 import { callModel } from "./openrouter.js";
 import { logCall } from "./callLog.js";
 import {
@@ -25,8 +25,15 @@ export async function analysePlayedGames(games) {
     return { ok: false, stage: "input", failure_reason: count.reason };
   }
 
-  const template = fs.readFileSync(PROMPT_PATH, "utf8");
-  const prompt = template.replace("{{GAMES}}", games.map(g => `- ${g}`).join("\n"));
+  const promptFile = loadPrompt(PROMPT_PATH);
+  const prompt = promptFile.text.replace("{{GAMES}}", games.map(g => `- ${g}`).join("\n"));
+
+  // Recorded on every row so a result can be attributed to the text that made it.
+  const provenance = {
+    prompt_file: promptFile.file,
+    prompt_version: promptFile.version,
+    prompt_sha256: promptFile.sha256,
+  };
 
   const maxAttempts = Math.min(2, config.maxCallsPerRequest);
   let last = null;
@@ -36,13 +43,14 @@ export async function analysePlayedGames(games) {
 
     if (!result.ok) {
       logCall({ call: "analysis", model: result.model, latency_ms: result.latency_ms,
+                ...provenance,
                 success: false, failure_reason: result.failure_reason, attempt });
       last = { ok: false, stage: "call", failure_reason: result.failure_reason };
       continue;
     }
 
     const base = {
-      call: "analysis", model: result.model, tokens_in: result.tokens_in,
+      call: "analysis", model: result.model, ...provenance, tokens_in: result.tokens_in,
       tokens_out: result.tokens_out, cost_usd: result.cost_usd,
       latency_ms: result.latency_ms, attempt,
     };
@@ -74,6 +82,7 @@ export async function analysePlayedGames(games) {
       evidenceCheck: evidence,
       usage: { tokens_in: result.tokens_in, tokens_out: result.tokens_out,
                cost_usd: result.cost_usd, latency_ms: result.latency_ms, attempts: attempt },
+      prompt: promptFile,
     };
   }
 

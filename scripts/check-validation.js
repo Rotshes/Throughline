@@ -8,6 +8,7 @@
 import {
   validateMotifsShape, checkGameCount, checkPathAEvidence, parseJsonStrict,
 } from "../src/validate.js";
+import { loadPrompt } from "../src/prompt.js";
 
 const games = ["Animal Crossing", "Stardew Valley"];
 
@@ -51,6 +52,17 @@ const cases = [
   ["parse: bare JSON accepted", () => parseJsonStrict('{"motifs":[]}').ok, true],
   ["parse: fenced JSON recovered", () => parseJsonStrict('```json\n{"motifs":[]}\n```').ok, true],
   ["parse: prose rejected", () => parseJsonStrict("Here are the motifs I found:").ok, false],
+
+  ["prompt: analysis.md declares a version",
+    () => loadPrompt("prompts/analysis.md").version !== null, true],
+  ["prompt: all three prompts declare a version",
+    () => ["analysis", "preferences", "matching"]
+            .every(n => loadPrompt(`prompts/${n}.md`).version !== null), true],
+  ["prompt: hash is stable across loads",
+    () => loadPrompt("prompts/analysis.md").sha256 === loadPrompt("prompts/analysis.md").sha256, true],
+  ["prompt: the three prompts have different hashes",
+    () => new Set(["analysis", "preferences", "matching"]
+            .map(n => loadPrompt(`prompts/${n}.md`).sha256)).size === 3, true],
 ];
 
 let failed = 0;

@@ -26,7 +26,11 @@ if (!result.ok) {
   process.exit(1);
 }
 
-const { motifs, evidenceCheck, usage } = result;
+const { motifs, evidenceCheck, usage, prompt } = result;
+
+if (!prompt.version) {
+  console.log(`WARNING: ${prompt.file} has no version header. This result cannot be attributed to a prompt version.\n`);
+}
 
 if (motifs.length === 0) {
   console.log("Zero motifs — the model found nothing these games share.");
