@@ -75,3 +75,42 @@ export function parseJsonStrict(text) {
     return { ok: false, reason: `not valid JSON: ${e.message}` };
   }
 }
+
+/**
+ * Criteria 7 and 7a, enforced in code because they are cross-references the
+ * schema cannot express: the schema does not know what is in the candidate set
+ * or which motifs stage 1 produced.
+ *
+ * This is the check that stops the model recommending a game that does not
+ * exist, and stops it claiming to satisfy motifs it was never given.
+ */
+export function checkRecommendation(rec, candidateTitles, motifNames) {
+  const norm = s => String(s).trim().toLowerCase();
+  const titles = new Set(candidateTitles.map(norm));
+  const motifs = new Set(motifNames.map(norm));
+  const problems = [];
+
+  if (rec.outcome === "recommended") {
+    if (!rec.title || !titles.has(norm(rec.title))) {
+      problems.push(`Recommended "${rec.title}", which is not in the candidate set.`);
+    }
+    if (rec.satisfies.length === 0) {
+      problems.push("A recommendation must name at least one motif it satisfies.");
+    }
+  } else if (rec.outcome === "no_good_fit") {
+    if (rec.satisfies.length > 0) {
+      problems.push("A decline must not claim to satisfy any motif.");
+    }
+    if (rec.title != null && !titles.has(norm(rec.title))) {
+      problems.push(`Declined but named "${rec.title}", which is not in the candidate set.`);
+    }
+  }
+
+  for (const name of rec.satisfies) {
+    if (!motifs.has(norm(name))) {
+      problems.push(`Claims to satisfy "${name}", which stage 1 did not produce.`);
+    }
+  }
+
+  return { ok: problems.length === 0, problems };
+}

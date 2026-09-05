@@ -18,7 +18,7 @@ const PROMPT_PATH = "prompts/analysis.md";
  * Every outcome is logged, including failures. One retry on a malformed
  * response, then the failure is reported as a failure. Criterion 12.
  */
-export async function analysePlayedGames(games) {
+export async function analysePlayedGames(games, budget) {
   const count = checkGameCount(games);
   if (!count.ok) {
     // Rejected before any call. Nothing was spent, so there is nothing to log.
@@ -39,6 +39,11 @@ export async function analysePlayedGames(games) {
   let last = null;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    if (budget && !budget.spend()) {
+      return { ok: false, stage: "budget",
+               failure_reason: `Model-call cap of ${budget.max} reached. Aborting.` };
+    }
+
     const result = await callModel({ prompt });
 
     if (!result.ok) {
