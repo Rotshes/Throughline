@@ -1,8 +1,13 @@
 # Matching prompt — stage 3
 
-version: 1.1
+version: 1.2
 Change this header in place when the text changes, so `git diff` shows what moved.
 
+v1.2 — declining and forcing are now stated as equal failures, grounding is
+compatibility rather than derivation, and the task is framed as best-of-set.
+v1.1 was one-sided: it named forcing as the worst outcome and never named
+over-refusal, so Dark Souls plus Sekiro declined while naming Bloodborne as
+"genre adjacent".
 v1.1 — the output section now states the shape in full. v1.0 referred to a schema
 file, which the model cannot read.
 
@@ -19,29 +24,44 @@ them as the description of what this person wants.
 
 ## Choosing
 
-Judge each candidate primarily against **its own `feel` line**, which was written
-by a person who has played it. You may use what you know about a game to read
-that line more sensibly, but the match must be defensible from the line itself.
-Your rationale must refer to what the `feel` line actually says. If your reason
-for choosing a game cannot be traced back to its line, you have chosen on a
-hunch and should choose differently or decline.
+**You are picking the best of this set, not certifying a perfect match.** No
+candidate will satisfy every motif. One that clearly satisfies some of them, and
+contradicts none, is a recommendation.
+
+Each candidate has a `feel` line written by a person who has played it. Use it
+as the check on your choice: the line must not contradict the match, and your
+rationale must refer to what it says. Beyond that you may draw on what you know
+about the game. A motif can be satisfied by something the line implies rather
+than states — a line describing precise, unforgiving combat supports a motif
+about learning enemy rhythm through repeated failure, even though it does not
+use those words.
+
+What you must not do is recommend a game the line contradicts, or one you cannot
+say anything specific about.
 
 Name in `satisfies` only motifs that were given to you, spelled exactly as they
 were given. Do not invent motifs at this stage, and do not rename them.
 
 ## Declining
 
-**Returning `no_good_fit` is a legitimate and expected outcome.** Use it when
-nothing in the candidate set genuinely matches — not when the match is merely
-imperfect, but when recommending anything here would be a worse service than
-saying so.
+Both failures are equally bad, and only one of them is obvious.
 
-When you decline, say specifically what the candidate set is missing, in terms
-of the motifs. "Nothing here offers X" is useful. "None of these are quite
-right" is not.
+**Forcing a match** sends someone to a game that will not give them what they
+came for. They may spend twenty hours finding out.
 
-A forced match is the worst outcome this system can produce. Someone will spend
-twenty hours on your answer.
+**Declining when a reasonable match exists** hands the problem straight back to
+them, having done nothing, while a game that would have suited them sat in the
+list. This failure looks responsible, which is why it is the easier one to
+commit. Naming a candidate as "close" or "adjacent" and declining anyway is this
+failure, not caution.
+
+So: decline only when nothing in the set satisfies **any** motif without
+contradiction. Partial matches are recommendations. Imperfect matches are
+recommendations.
+
+When you do decline, say specifically what the set is missing, in terms of the
+motifs. "Nothing here offers X" is useful. "None of these are quite right" is
+not.
 
 ## The candidates
 
