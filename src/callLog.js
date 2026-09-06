@@ -14,6 +14,22 @@ import { config } from "./config.js";
  * Step 5 replaces the destination with Supabase. The row shape stays the same,
  * so that swap changes where records go and not what a record is.
  */
+/**
+ * Rows produced during the current request, so they can also be written to the
+ * durable store once the session row exists and has an id.
+ *
+ * Module-level state, which is normally a smell. It is acceptable here because a
+ * serverless invocation handles one request; locally, takeCalls() is simply
+ * never called. Anything longer-lived than a single request must not rely on it.
+ */
+let pending = [];
+
+export function takeCalls() {
+  const rows = pending;
+  pending = [];
+  return rows;
+}
+
 export function logCall(row) {
   const record = {
     at: new Date().toISOString(),
@@ -31,8 +47,17 @@ export function logCall(row) {
     attempt: row.attempt ?? 1,
   };
 
-  const file = path.resolve(config.callLogPath);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.appendFileSync(file, JSON.stringify(record) + "\n");
+  pending.push(record);
+
+  // Local development only. On a read-only or ephemeral filesystem this is
+  // skipped rather than failing the request — the durable copy is the store.
+  try {
+    const file = path.resolve(config.callLogPath);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.appendFileSync(file, JSON.stringify(record) + "\n");
+  } catch {
+    // Deliberately silent: see above.
+  }
+
   return record;
 }

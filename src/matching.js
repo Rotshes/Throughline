@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import { readData } from "./paths.js";
 import { loadPrompt } from "./prompt.js";
 import { callModel } from "./openrouter.js";
 import { logCall } from "./callLog.js";
@@ -11,7 +11,7 @@ const PROMPT_PATH = "prompts/matching.md";
 const CANDIDATES_PATH = "data/candidates.json";
 
 export function loadCandidates() {
-  const raw = JSON.parse(fs.readFileSync(CANDIDATES_PATH, "utf8"));
+  const raw = JSON.parse(readData(CANDIDATES_PATH));
   return raw.candidates;
 }
 

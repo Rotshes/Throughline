@@ -1,5 +1,5 @@
-import fs from "node:fs";
 import crypto from "node:crypto";
+import { readData } from "./paths.js";
 
 /**
  * Load a prompt and identify it.
@@ -19,7 +19,7 @@ import crypto from "node:crypto";
  * enough to notice that a file changed, which is all it is for here.
  */
 export function loadPrompt(path) {
-  const text = fs.readFileSync(path, "utf8");
+  const text = readData(path);
   const declared = text.match(/^version:\s*([0-9]+\.[0-9]+)\s*$/m);
 
   return {

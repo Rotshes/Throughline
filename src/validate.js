@@ -1,10 +1,16 @@
-import fs from "node:fs";
-import Ajv from "ajv";
+import AjvModule from "ajv";
+import { readData } from "./paths.js";
+
+// Ajv ships as CommonJS. Imported into ESM directly, Node hands back the
+// constructor; bundled by esbuild, the same import can arrive as
+// { default: Ajv }. Taking either means this cannot work locally and break once
+// deployed, which is the failure mode that costs an afternoon.
+const Ajv = AjvModule.default ?? AjvModule;
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 
-const motifsSchema = JSON.parse(fs.readFileSync("schemas/motifs.schema.json", "utf8"));
-const recommendationSchema = JSON.parse(fs.readFileSync("schemas/recommendation.schema.json", "utf8"));
+const motifsSchema = JSON.parse(readData("schemas/motifs.schema.json"));
+const recommendationSchema = JSON.parse(readData("schemas/recommendation.schema.json"));
 
 export const validateMotifsShape = ajv.compile(motifsSchema);
 export const validateRecommendationShape = ajv.compile(recommendationSchema);

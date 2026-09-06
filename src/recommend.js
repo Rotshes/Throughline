@@ -2,6 +2,8 @@ import { config } from "./config.js";
 import { createBudget } from "./budget.js";
 import { analysePlayedGames } from "./analysis.js";
 import { match, loadCandidates, excludePlayed } from "./matching.js";
+import { takeCalls } from "./callLog.js";
+import { saveSession, saveCalls, storeConfigured } from "./store.js";
 
 /**
  * The whole path A pipeline: played games in, one recommendation or an honest
@@ -42,4 +44,45 @@ export async function recommendFromGames(games) {
 
   return { ok: true, analysis, matching: matched, candidates: candidates.length,
            excluded: loadCandidates().length - candidates.length, budget };
+}
+
+
+/**
+ * The pipeline plus durable recording. Used by the deployed function; the CLI
+ * scripts call recommendFromGames directly and keep the file log.
+ *
+ * Recording failures are reported, never thrown. A user waiting on a
+ * recommendation should not lose it because a database insert failed — but a
+ * silent recording failure would make criterion 10 a fiction, so it comes back
+ * in the result.
+ */
+export async function recommendAndRecord(games) {
+  const result = await recommendFromGames(games);
+
+  const session = {
+    path: "A",
+    input_games: games,
+    motifs: result.analysis?.motifs ?? null,
+    outcome: result.ok ? result.matching.recommendation.outcome : "failed",
+    failure_stage: result.ok ? null : `${result.phase ?? "?"}/${result.stage ?? "?"}`,
+    failure_reason: result.ok ? null : (result.failure_reason ?? null),
+    recommendation: result.ok ? result.matching.recommendation : null,
+  };
+
+  const calls = takeCalls();
+  let sessionId = null;
+  let recording = { ok: true, skipped: !storeConfigured() };
+
+  if (storeConfigured()) {
+    const saved = await saveSession(session);
+    if (saved.ok) {
+      sessionId = saved.id;
+      const savedCalls = await saveCalls(sessionId, calls);
+      if (!savedCalls.ok) recording = savedCalls;
+    } else {
+      recording = saved;
+    }
+  }
+
+  return { ...result, sessionId, recording, callCount: calls.length };
 }
