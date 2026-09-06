@@ -31,6 +31,7 @@ that set. The stage that works out what they want never sees the candidates.
 |`web/`|The React interface.|
 |`db/schema.sql`|The Supabase tables. Run once.|
 |`tests/reference-set.md`|The seven reference inputs and their expected behaviour.|
+|`tests/results-turn-1.md`|What the deployed site actually did when they were run.|
 |`logs/model-calls.jsonl`|Local call log. The durable copy is in Supabase.|
 
 ## Running it
@@ -51,13 +52,18 @@ node scripts/run-recommend.js "Dark Souls" "Sekiro"
 
 ## State
 
-**Turn 1 complete.** Path A works end to end and is deployed.
+**Turn 1 complete.** Path A works end to end, is deployed, and has been run
+against the reference set on the deployed artifact rather than locally —
+`tests/results-turn-1.md`.
 
 Not built yet: path B (the preference questions, for someone with no games to
 name) — the prompt and questions exist, the stage does not. The candidate set is
 still a static list of 20 games; turn 2 replaces it with a game database API,
-which also brings screenshots and fixes title matching.
+which also brings screenshots and fixes title matching. That run is the evidence
+for turn 2: every correct answer the pipeline could give was a decline, because
+with twenty games the closest match keeps turning out to be one of the inputs.
 
 Known and unfixed: there is no rate limiting, so the deployed endpoint spends
 OpenRouter credit for anyone who finds it. Exposure is bounded only by the
-prepaid balance.
+prepaid balance. Reference case 5 is a bad test — it can pass while the thing it
+tests has failed — and needs rewriting before it is trusted again.
