@@ -1,8 +1,18 @@
 import "dotenv/config";
 
+/**
+ * Read a required secret, tolerating how they arrive.
+ *
+ * Values pasted into a hosting dashboard commonly carry a trailing newline or
+ * wrapping quotes. Either produces `Bearer "sk-..."` and a 401 that reads as a
+ * bad key rather than a bad paste, which is a slow thing to diagnose.
+ */
 function required(name) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing ${name}. Copy .env.example to .env and fill it in.`);
+  const raw = process.env[name];
+  if (!raw) throw new Error(`Missing ${name}. Set it in .env locally, or in the host's environment variables when deployed.`);
+
+  const v = raw.trim().replace(/^["']|["']$/g, "").trim();
+  if (!v) throw new Error(`${name} is set but empty once quotes and whitespace are stripped.`);
   return v;
 }
 
