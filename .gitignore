@@ -3,4 +3,9 @@
 !.env.example
 node_modules/
 dist/
+web/dist/
+.netlify/
 .DS_Store
+
+# Local Netlify folder
+.netlify
