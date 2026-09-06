@@ -1,7 +1,7 @@
 import { config } from "./config.js";
 import { createBudget } from "./budget.js";
 import { analysePlayedGames } from "./analysis.js";
-import { match, loadCandidates } from "./matching.js";
+import { match, loadCandidates, excludePlayed } from "./matching.js";
 
 /**
  * The whole path A pipeline: played games in, one recommendation or an honest
@@ -29,9 +29,17 @@ export async function recommendFromGames(games) {
              analysis, budget };
   }
 
-  const candidates = loadCandidates();
+  const candidates = excludePlayed(loadCandidates(), games);
+
+  if (candidates.length === 0) {
+    return { ok: false, phase: "matching", stage: "candidates",
+             failure_reason: "Every candidate was one of the games you named.",
+             analysis, budget };
+  }
+
   const matched = await match(analysis.motifs, candidates, budget);
   if (!matched.ok) return { ok: false, phase: "matching", ...matched, analysis, budget };
 
-  return { ok: true, analysis, matching: matched, candidates: candidates.length, budget };
+  return { ok: true, analysis, matching: matched, candidates: candidates.length,
+           excluded: loadCandidates().length - candidates.length, budget };
 }

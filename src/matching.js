@@ -16,6 +16,28 @@ export function loadCandidates() {
 }
 
 /**
+ * Criterion 7c. A game the user named as an input is never a candidate.
+ *
+ * Found in turn 1 step 4: given Super Metroid and Hollow Knight, the system
+ * recommended Hollow Knight. It passed every gate — valid schema, real title,
+ * real motifs, evidence check green — because nothing had ever been told that
+ * recommending someone their own game is useless. The rule was too obvious to
+ * write down, which is precisely why it had to be.
+ *
+ * Enforced here rather than in the prompt. A prompt instruction would hold most
+ * of the time; removing the entries makes it impossible.
+ *
+ * Limitation: exact titles only, after trimming and lowercasing. "Civ VI" as an
+ * input will not exclude "Civilization VI" from the set. That is pitfall 3
+ * appearing in a new place, and the turn 2 database resolves both to one id.
+ */
+export function excludePlayed(candidates, games) {
+  const norm = s => String(s).trim().toLowerCase();
+  const played = new Set(games.map(norm));
+  return candidates.filter(c => !played.has(norm(c.title)));
+}
+
+/**
  * Stage 3. Motifs plus candidates in, one title or an honest decline out.
  *
  * This stage does not know, and must not be told, which path produced the

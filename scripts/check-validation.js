@@ -11,11 +11,16 @@ import {
 import { checkRecommendation } from "../src/validate.js";
 import { loadPrompt } from "../src/prompt.js";
 import { createBudget } from "../src/budget.js";
-import { loadCandidates } from "../src/matching.js";
+import { loadCandidates, excludePlayed } from "../src/matching.js";
 
 const games = ["Animal Crossing", "Stardew Valley"];
 
-const TITLES = ["Hollow Knight", "Planet Coaster", "Celeste"];
+const FIXTURE = [
+  { title: "Hollow Knight", feel: "a melancholic descent through a ruined bug kingdom" },
+  { title: "Planet Coaster", feel: "a cheerful sandbox of curves and queues" },
+  { title: "Celeste", feel: "a hard climb that is kind to you about failing" },
+];
+const TITLES = FIXTURE.map(c => c.title);
 const MOTIF_NAMES = ["Interconnected exploration", "Ability-gated progress"];
 const REC = {
   outcome: "recommended",
@@ -99,6 +104,21 @@ const cases = [
     () => checkRecommendation({ outcome: "no_good_fit", title: "Hollow Knight", rationale: "x".repeat(50), satisfies: [] }, TITLES, MOTIF_NAMES).ok, true],
   ["rec: decline that still claims a satisfied motif rejected",
     () => checkRecommendation({ outcome: "no_good_fit", title: null, rationale: "x".repeat(50), satisfies: ["Interconnected exploration"] }, TITLES, MOTIF_NAMES).ok, false],
+  // These use a fixed fixture, not data/candidates.json. A check that depends on
+  // which games happen to be in the list stops being a check the day the list
+  // is edited.
+  ["exclude: a named game is removed",
+    () => excludePlayed(FIXTURE, ["Hollow Knight"]).length === 2
+       && !excludePlayed(FIXTURE, ["Hollow Knight"]).some(c => c.title === "Hollow Knight"), true],
+  ["exclude: both named games are removed",
+    () => excludePlayed(FIXTURE, ["Hollow Knight", "Celeste"]).length === 1, true],
+  ["exclude: matching ignores case and spacing",
+    () => excludePlayed(FIXTURE, ["  hollow KNIGHT "]).length === 2, true],
+  ["exclude: a game not in the list changes nothing",
+    () => excludePlayed(FIXTURE, ["Skyrim"]).length === 3, true],
+  ["exclude: naming every candidate empties the set",
+    () => excludePlayed(FIXTURE, FIXTURE.map(c => c.title)).length === 0, true],
+
   ["rec: title matching ignores case and spacing",
     () => checkRecommendation({ ...REC, title: "  hollow knight " }, TITLES, MOTIF_NAMES).ok, true],
 ];
