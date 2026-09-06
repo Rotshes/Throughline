@@ -3,6 +3,8 @@
 Module 10, five parts. This is the primary work product. The code is generated
 from it; when the output is wrong, this gets fixed first and the code rebuilt.
 
+Version 1.5 — motif name cap 60 to 80; adds pitfall 16.
+Version 1.4 — adds criterion 7c and pitfalls 14-15, from turn 1 step 4.
 Version 1.3 — adds pitfalls 11-13 from turn 001.
 Version 1.2 — adds the decline outcome (7a) and the two-to-five game rule (7b).
 Version 1.1 — adds the newcomer path and the candidate-source progression.
@@ -59,6 +61,10 @@ disagree about whether it was met.
    outcome may name the closest candidate or none, must list no satisfied motifs,
    and must say what the candidate set is missing. The interface shows a decline
    as a decline, never as a weak recommendation.
+7c. **A game the user named is never in the candidate set.** Input games are
+   removed before the matching stage is called, in code rather than by asking the
+   model. Recommending someone a game they have just said they play is the
+   clearest possible signal that nothing happened.
 7b. **Path A requires between two and five games.** Fewer than two is rejected by
    the form, before any model call is made. A single game cannot produce a motif
    that satisfies criterion 3, so calling the model would spend money on a request
@@ -219,5 +225,21 @@ Written once, permanently. Each is a failure expected in advance.
     reading the output, and that does not scale.
 13. **Model identifiers go stale.** A retired or misspelled id returns HTTP 404.
     Keep it in the environment so a change is configuration, not a code edit.
-14. **The model will agree with a suggestion rather than correct it.** Do not ask
+14. **A rule too obvious to write down is a rule the model does not have.**
+    Nothing said "do not recommend a game they already named", so it did — twice
+    — while passing every gate: valid schema, real title, real motifs, evidence
+    check green. Obviousness is not enforcement. Where a rule can be made
+    structurally impossible in code, it belongs there rather than in a prompt.
+15. **A check that depends on mutable data stops being a check.** Two exclusion
+    checks were written against `data/candidates.json` and broke the moment the
+    list differed. Checks assert against fixtures; the data file gets its own
+    separate well-formedness check.
+16. **A numeric limit stated in a prompt is a request, not a constraint.** The
+    analysis prompt said "3 to 60 characters" and the model returned a
+    61-character name twice in a row. Retrying did not help and could not: this
+    was not a transient failure but the model's natural output length. Before
+    putting a bound in a schema, ask what it protects. If the answer is nothing,
+    it is a style preference that will one day reject good output and cost two
+    calls to discover.
+17. **The model will agree with a suggestion rather than correct it.** Do not ask
     it whether its own motifs were good.
