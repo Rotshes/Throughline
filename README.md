@@ -2,9 +2,19 @@
 
 ASE-26 independent project.
 
+**Live: https://lively-sunshine-79672b.netlify.app/**
+
 Works out what you actually want from a game — from games you've played and
 enjoyed, or from what you say you're after if you're new to this — and picks one
 title from a set of candidates, with an explanation of why it fits.
+
+## The design in one line
+
+Three stages: work out what the person wants (from games they've played, or from
+what they say they want), assemble a set of candidate games, then pick one from
+that set. The stage that works out what they want never sees the candidates.
+
+## What is in here
 
 |Path|What it holds|
 |-|-|
@@ -14,11 +24,40 @@ title from a set of candidates, with an explanation of why it fits.
 |`docs/decisions/`|One file per decision that could have gone another way.|
 |`docs/turns/`|One record per turn of work, on the seven-part frame.|
 |`prompts/`|The three model prompts, versioned like code.|
-|`tests/reference-set.md`|The six reference inputs and their expected behaviour.|
+|`schemas/`|What the model is allowed to return.|
+|`data/`|The candidate games and their hand-written `feel` lines, and path B's questions.|
+|`src/`|The pipeline. Runs only on the server; holds the keys.|
+|`netlify/functions/`|The one HTTP endpoint.|
+|`web/`|The React interface.|
+|`db/schema.sql`|The Supabase tables. Run once.|
+|`tests/reference-set.md`|The seven reference inputs and their expected behaviour.|
+|`logs/model-calls.jsonl`|Local call log. The durable copy is in Supabase.|
 
-## The design in one line
+## Running it
 
-Three stages: work out what the person wants (from games they've played, or from
-what they say they want), assemble a set of candidate games, then pick one from
-that set. The stage that works out what they want never sees the candidates.
+```
+npm install
+cp .env.example .env      # then fill it in
+npm run check             # 37 offline checks, no key needed, no cost
+npx netlify dev           # Vite and the function together, on :8888
+```
 
+Command line, without the interface:
+
+```
+node scripts/run-analysis.js "Animal Crossing" "Stardew Valley"
+node scripts/run-recommend.js "Dark Souls" "Sekiro"
+```
+
+## State
+
+**Turn 1 complete.** Path A works end to end and is deployed.
+
+Not built yet: path B (the preference questions, for someone with no games to
+name) — the prompt and questions exist, the stage does not. The candidate set is
+still a static list of 20 games; turn 2 replaces it with a game database API,
+which also brings screenshots and fixes title matching.
+
+Known and unfixed: there is no rate limiting, so the deployed endpoint spends
+OpenRouter credit for anyone who finds it. Exposure is bounded only by the
+prepaid balance.
