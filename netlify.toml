@@ -1,0 +1,37 @@
+# Local development. Without this, netlify dev tries to auto-detect the
+# framework and can end up running the production build instead of a dev server.
+# framework = "#custom" turns detection off and uses exactly what is stated here.
+[dev]
+  command    = "npm run dev"
+  targetPort = 5173
+  framework  = "#custom"
+  publish    = "web/dist"
+  autoLaunch = false
+
+[build]
+  command  = "npm run build"
+  publish  = "web/dist"
+  functions = "netlify/functions"
+
+# The pipeline reads its prompts, schemas and candidate list from disk at
+# request time. Without these the bundled function would deploy cleanly and then
+# fail on the first request. See src/paths.js.
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["prompts/**", "schemas/**", "data/**"]
+
+[[redirects]]
+  from = "/api/recommend/accept"
+  to   = "/.netlify/functions/recommend/accept"
+  status = 200
+
+[[redirects]]
+  from = "/api/recommend"
+  to   = "/.netlify/functions/recommend"
+  status = 200
+
+# Single-page app: everything else serves the built index.
+[[redirects]]
+  from = "/*"
+  to   = "/index.html"
+  status = 200
