@@ -1,8 +1,9 @@
 # Preferences prompt — stage 1, path B
 
-version: 1.1
+version: 1.2
 Change this header in place when the text changes, so `git diff` shows what moved.
 
+v1.2 — motif name cap raised from 60 to 80 characters to match the schema.
 v1.1 — the output section now states the shape in full. v1.0 referred to a schema
 file, which the model cannot read.
 
@@ -55,7 +56,7 @@ Exactly these field names. `source`, not `question`.
 {
   "motifs": [
     {
-      "name": "short label, 3 to 60 characters, not a word from the answers",
+      "name": "short label, 3 to 80 characters, not a word from the answers",
       "description": "what this motif is, 20 to 400 characters",
       "evidence": [
         { "source": "the question id, such as q_tone", "detail": "which answer led here and why, 10 to 300 characters" }

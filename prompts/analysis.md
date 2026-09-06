@@ -1,8 +1,9 @@
 # Analysis prompt — stage 1, path A
 
-version: 1.1
+version: 1.2
 Change this header in place when the text changes, so `git diff` shows what moved.
 
+v1.2 — motif name cap raised from 60 to 80 characters to match the schema.
 v1.1 — the output section now states the shape in full. v1.0 referred to a schema
 file, which the model cannot read; it guessed the field names and guessed wrong.
 
@@ -60,7 +61,7 @@ Exactly these field names. `source`, not `game`.
 {
   "motifs": [
     {
-      "name": "short label, 3 to 60 characters",
+      "name": "short label, 3 to 80 characters",
       "description": "what this motif is, 20 to 400 characters",
       "evidence": [
         { "source": "a game title exactly as it was given to you", "detail": "a specific concrete detail from that game, 10 to 300 characters" }

@@ -25,8 +25,8 @@
         "name": {
           "type": "string",
           "minLength": 3,
-          "maxLength": 60,
-          "description": "Short label for the motif. Should describe how something feels or what the player is doing, not a genre."
+          "maxLength": 80,
+          "description": "Short label for the motif. Should describe how something feels or what the player is doing, not a genre. The cap is a sanity bound against a paragraph appearing here, not a style rule — it was 60 and rejected a good 61-character name twice. See spec.md pitfall 16."
         },
         "description": {
           "type": "string",
