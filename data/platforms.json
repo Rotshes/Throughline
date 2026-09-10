@@ -1,0 +1,77 @@
+{
+  "$comment": "Parent platforms, not platforms. 'PlayStation' rather than 'PlayStation 5' is the granularity a person has in mind when they say what they can play on.",
+  "source": "rawg",
+  "pinnedOn": "2026-09-10",
+  "platforms": [
+    {
+      "id": 1,
+      "slug": "pc",
+      "name": "PC"
+    },
+    {
+      "id": 2,
+      "slug": "playstation",
+      "name": "PlayStation"
+    },
+    {
+      "id": 3,
+      "slug": "xbox",
+      "name": "Xbox"
+    },
+    {
+      "id": 4,
+      "slug": "ios",
+      "name": "iOS"
+    },
+    {
+      "id": 8,
+      "slug": "android",
+      "name": "Android"
+    },
+    {
+      "id": 5,
+      "slug": "mac",
+      "name": "Apple Macintosh"
+    },
+    {
+      "id": 6,
+      "slug": "linux",
+      "name": "Linux"
+    },
+    {
+      "id": 7,
+      "slug": "nintendo",
+      "name": "Nintendo"
+    },
+    {
+      "id": 9,
+      "slug": "atari",
+      "name": "Atari"
+    },
+    {
+      "id": 10,
+      "slug": "commodore-amiga",
+      "name": "Commodore / Amiga"
+    },
+    {
+      "id": 11,
+      "slug": "sega",
+      "name": "SEGA"
+    },
+    {
+      "id": 12,
+      "slug": "3do",
+      "name": "3DO"
+    },
+    {
+      "id": 13,
+      "slug": "neo-geo",
+      "name": "Neo Geo"
+    },
+    {
+      "id": 14,
+      "slug": "web",
+      "name": "Web"
+    }
+  ]
+}

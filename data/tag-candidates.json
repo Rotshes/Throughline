@@ -1,0 +1,39 @@
+{
+  "$comment": "Proposed tag vocabulary, for Roy to prune. Not pinned until scripts/pin-tags.js has resolved every slug against the catalogue and you have deleted the ones that are wrong. RAWG has 9,736 tags and most are store plumbing (steam-cloud, full-controller-support) or non-English duplicates (dlia-odnogo-igroka, ekshen, atmosfera). A vocabulary is a curated list, not a top-40 by count. Same reasoning as decision 0002 on the hand-written feel lines: where the automatic version gives garbage, a person picks.",
+  "howToUse": "Delete anything you would not pick from a dropdown. Add anything missing. Then run: node scripts/pin-tags.js — it resolves each slug, reports the real game count, and refuses to pin one that does not exist or is too thin to be worth offering.",
+  "facets": [
+    {
+      "id": "feel",
+      "label": "How it should feel",
+      "note": "The reason v1 existed. These are the words genres cannot say.",
+      "tags": ["atmospheric", "relaxing", "cozy", "funny", "dark", "emotional", "cute", "creepy"]
+    },
+    {
+      "id": "shape",
+      "label": "What kind of game",
+      "note": "Sub-genres people actually name. 'deckbuilding' returned 3 games — the right slug may be different, or it may not exist. pin-tags will say.",
+      "tags": ["roguelike", "roguelite", "metroidvania", "souls-like", "turn-based", "real-time-strategy", "tactical", "point-and-click", "visual-novel", "tower-defense", "city-builder", "deckbuilding", "open-world", "sandbox", "survival", "stealth"]
+    },
+    {
+      "id": "demand",
+      "label": "How much it asks of you",
+      "tags": ["difficult", "casual", "short", "story-rich", "exploration", "grinding"]
+    },
+    {
+      "id": "company",
+      "label": "Alone or with someone",
+      "tags": ["singleplayer", "co-op", "local-co-op", "online-co-op", "split-screen", "local-multiplayer", "multiplayer", "pvp"]
+    },
+    {
+      "id": "setting",
+      "label": "Where it takes place",
+      "tags": ["sci-fi", "fantasy", "horror", "post-apocalyptic", "cyberpunk", "medieval", "historical", "space", "western"]
+    },
+    {
+      "id": "look",
+      "label": "How it looks",
+      "note": "Weak signal on their own, but people do choose by these.",
+      "tags": ["pixel-graphics", "2d", "first-person", "third-person", "isometric", "anime", "retro"]
+    }
+  ]
+}

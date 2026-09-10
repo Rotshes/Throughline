@@ -1,0 +1,102 @@
+{
+  "$comment": "Pinned from the catalogue by scripts/pin-vocabularies.js. This is the complete list of categories this product can understand — see docs/spec.md part 5, pitfall 9. Do not hand-add an entry the catalogue does not have; it will return nothing.",
+  "source": "rawg",
+  "pinnedOn": "2026-09-10",
+  "categories": [
+    {
+      "slug": "action",
+      "name": "Action",
+      "count": 192185
+    },
+    {
+      "slug": "adventure",
+      "name": "Adventure",
+      "count": 152498
+    },
+    {
+      "slug": "platformer",
+      "name": "Platformer",
+      "count": 100952
+    },
+    {
+      "slug": "puzzle",
+      "name": "Puzzle",
+      "count": 97475
+    },
+    {
+      "slug": "indie",
+      "name": "Indie",
+      "count": 87534
+    },
+    {
+      "slug": "simulation",
+      "name": "Simulation",
+      "count": 77338
+    },
+    {
+      "slug": "casual",
+      "name": "Casual",
+      "count": 68376
+    },
+    {
+      "slug": "strategy",
+      "name": "Strategy",
+      "count": 62745
+    },
+    {
+      "slug": "role-playing-games-rpg",
+      "name": "RPG",
+      "count": 62246
+    },
+    {
+      "slug": "shooter",
+      "name": "Shooter",
+      "count": 59651
+    },
+    {
+      "slug": "racing",
+      "name": "Racing",
+      "count": 25872
+    },
+    {
+      "slug": "sports",
+      "name": "Sports",
+      "count": 22871
+    },
+    {
+      "slug": "arcade",
+      "name": "Arcade",
+      "count": 22726
+    },
+    {
+      "slug": "educational",
+      "name": "Educational",
+      "count": 15733
+    },
+    {
+      "slug": "fighting",
+      "name": "Fighting",
+      "count": 11822
+    },
+    {
+      "slug": "board-games",
+      "name": "Board Games",
+      "count": 8418
+    },
+    {
+      "slug": "family",
+      "name": "Family",
+      "count": 5435
+    },
+    {
+      "slug": "card",
+      "name": "Card",
+      "count": 4550
+    },
+    {
+      "slug": "massively-multiplayer",
+      "name": "Massively Multiplayer",
+      "count": 4281
+    }
+  ]
+}

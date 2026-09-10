@@ -20,6 +20,12 @@ export const config = {
   get openrouterKey() {
     return required("OPENROUTER_API_KEY");
   },
+  // The game catalogue. Free tier: 20,000 requests a month, and RAWG require an
+  // active hyperlink back to them on every page that shows their data. That is a
+  // licence condition, not a courtesy — see docs/spec.md part 3.
+  get rawgKey() {
+    return required("RAWG_API_KEY");
+  },
   // One model for both calls to begin with. The two-call split exists partly so
   // this can differ per call later, once the logs justify it. See spec.md part 5,
   // pitfall 8, and decision 0001.

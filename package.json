@@ -1,13 +1,17 @@
 {
   "name": "throughline",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Works out what someone wants from a game and picks one title from a candidate set.",
+  "description": "Pick a kind of game and the platforms you own; get three specific titles with images and a case for each.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "check": "node scripts/check-validation.js",
+    "check:catalogue": "node scripts/check-catalogue.js",
+    "catalogue:pin": "node scripts/pin-vocabularies.js",
+    "catalogue:inspect": "node scripts/inspect-catalogue.js",
+    "candidates": "node scripts/run-candidates.js",
     "analyse": "node scripts/run-analysis.js",
     "recommend": "node scripts/run-recommend.js",
     "start": "netlify dev"

@@ -3,8 +3,6 @@
 Module 10, five parts. This is the primary work product. The code is generated
 from it; when the output is wrong, this gets fixed first and the code rebuilt.
 
-Version 2.1 — adds tags as a third filter, criterion 4a, and pitfalls 18-19.
-See `docs/decisions/0004-tags-as-the-third-filter.md`.
 Version 2.0 — replaces the motif pipeline with filters and a persuasive
 shortlist. See `docs/decisions/0003-filters-and-shortlist.md` for why, and for
 what the change costs. Versions 1.0 to 1.5 described a different product; they
@@ -61,11 +59,9 @@ disagree about whether it was met.
 
 **The pipeline**
 
-1. From a deployed web address, a user selects a category, at least one
-   platform, and optionally any number of tags, and receives three games. Each
-   carries a title, at least one image, a short angle label, and a written case
-   for playing it. Tags are optional: category plus platform is a complete
-   request.
+1. From a deployed web address, a user selects a category and at least one
+   platform, and receives three games. Each carries a title, at least one image,
+   a short angle label, and a written case for playing it.
 2. **Every recommended game appears in the candidate set that was sent to the
    model.** Checked by id, not by title. Verifiable by comparing the response
    against the candidate set logged with the request. A response naming anything
@@ -75,12 +71,6 @@ disagree about whether it was met.
    against the model's claim, and never inferred from the prompt having said so.
 4. **Every recommended game carries the selected category** according to the
    catalogue's own classification.
-4a. **Where tags were selected, the catalogue says each recommended game carries
-   at least one of them.** Read that wording exactly. Criteria 3 and 4 assert
-   facts the catalogue holds; this asserts only that a label is present. Tags are
-   crowd-applied and measurably wrong — the catalogue calls God of War (2018) a
-   souls-like and Dota 2 a tower defence. Overstating what this gate proves would
-   be worse than not having it. See pitfall 18 and decision 0004.
 5. **Exactly three games, no duplicates.** If the filters leave fewer than three
    candidates, the app returns what exists and says how many it found. It never
    pads the list by relaxing a filter the user set.
@@ -125,15 +115,9 @@ Boundaries the agent must respect. Interior design is the agent's to choose.
 
 ### The three steps
 
-**Step 1 — the filter.** The user's category, platform and tag selections become
-a catalogue query. No model call. This step is pure code and can be tested with
-no key and no cost.
-
-The three vocabularies are pinned into `data/` rather than fetched per request:
-`categories.json` and `platforms.json` come straight from the catalogue,
-`tags.json` is hand-picked from 9,736 available tags because most of them are
-store plumbing or non-English duplicates. Whatever is in those three files is the
-entire vocabulary this product understands.
+**Step 1 — the filter.** The user's category and platform selections become a
+catalogue query. No model call. This step is pure code and can be tested with no
+key and no cost.
 
 **Step 2 — the candidate set.** The catalogue returns a pool; code reduces it to
 roughly twenty to fifty candidates with stable ids, and removes anything in the
@@ -205,8 +189,6 @@ Written before the code that satisfies it.
 | 5 | A candidate whose catalogue description contains an injected instruction | Instruction ignored; the description treated as text. Criterion 14. |
 | 6 | The same filters run three times | Overlap between runs recorded. Not a pass/fail — a measurement, per pitfall 7. |
 | 7 | The catalogue returns an error or times out | Shown as a catalogue failure, distinct from a model failure. Criterion 13. |
-| 8 | A category, a platform and two tags | Three games, the catalogue saying each carries at least one selected tag. Criterion 4a. |
-| 9 | The same category and platform, run once with a tag and once without | The two shortlists differ. If they do not, pitfall 19 has swallowed the tag filter. |
 
 Case 4 is the one to design carefully. Zero candidates must be reached with the
 model call genuinely not made, and that is checked by the absence of a
@@ -284,35 +266,6 @@ Written once, permanently. Each is a failure expected in advance.
 17. **An external API has a quota and a bad day.** RAWG's free tier is bounded per
     month, and criterion 13 exists because a catalogue outage will otherwise
     surface as an empty page that looks like a bad filter.
-
-18. **Tags are claims, not facts, and they fail in both directions.** The
-    catalogue's platform and date data can be trusted; its tags are crowd-applied.
-    Wrong ones: souls-like on God of War, tower-defense on Dota 2,
-    pixel-graphics on Limbo, metroidvania on Vampire Survivors. Missing ones:
-    Hades is not tagged `difficult`, so ranking by match count puts it ninth for
-    "difficult roguelike" behind games with a fifth of its ratings. A tag filter
-    is a strong hint and a tag gate proves only that a label is present. Never
-    write a criterion, a prompt line or a piece of interface copy that claims
-    more than that — and never assume the absence of a tag means anything.
-19. **Popular games accumulate tags, and rating ordering then finds them
-    everywhere.** GTA V carries atmospheric, funny, open-world, sandbox,
-    singleplayer, co-op, multiplayer, first-person and third-person. A handful of
-    mega-titles will surface under almost any filter, so fifty-one tags widen the
-    filter space far less than the arithmetic suggests. `dominanceReport` measures
-    it on every run. Do not fix it by sampling deeper into the pool without first
-    checking what that does to `MIN_RATINGS` — trading a visible problem for an
-    invisible one is not an improvement.
-20. **An ignored query parameter looks exactly like a working one.** A filter the
-    catalogue silently drops returns a full list and a plausible result. Every
-    filter parameter is verified by comparing a filtered count against an
-    unfiltered one before anything is built on it. This is how `?tags=` was
-    confirmed, and it is the same shape as the gate-passing-for-the-wrong-reason
-    failure that has now bitten this project twice.
-21. **A search endpoint is not a membership test.** `/tags?search=open-world`
-    returned `open-world-2` with 6 games while `open-world` with 9,338 existed.
-    Fuzzy ranking produces false negatives. Anything this project depends on is
-    resolved by the same call the app makes, then pinned to a file and checked
-    against the file.
 
 **Solved by this design, recorded so it is not re-solved:** title matching.
 Version 1.x's pitfall 3 — "Civ VI", "Civilization VI" and "Sid Meier's

@@ -1,0 +1,248 @@
+{
+  "$comment": "Pinned by scripts/pin-tags.js from data/tag-candidates.json. Every slug here was resolved by the same query the app makes, and returned at least 400 games. This is the entire vocabulary the interface may offer.",
+  "source": "rawg",
+  "pinnedOn": "2026-09-10",
+  "minGames": 400,
+  "facets": [
+    {
+      "id": "feel",
+      "label": "How it should feel",
+      "tags": [
+        {
+          "slug": "atmospheric",
+          "count": 39391
+        },
+        {
+          "slug": "relaxing",
+          "count": 21506
+        },
+        {
+          "slug": "cozy",
+          "count": 2555
+        },
+        {
+          "slug": "funny",
+          "count": 28669
+        },
+        {
+          "slug": "dark",
+          "count": 18609
+        },
+        {
+          "slug": "emotional",
+          "count": 4526
+        },
+        {
+          "slug": "cute",
+          "count": 39617
+        },
+        {
+          "slug": "creepy",
+          "count": 7508
+        }
+      ]
+    },
+    {
+      "id": "shape",
+      "label": "What kind of game",
+      "tags": [
+        {
+          "slug": "roguelike",
+          "count": 15060
+        },
+        {
+          "slug": "roguelite",
+          "count": 8674
+        },
+        {
+          "slug": "metroidvania",
+          "count": 4671
+        },
+        {
+          "slug": "souls-like",
+          "count": 1851
+        },
+        {
+          "slug": "turn-based",
+          "count": 5535
+        },
+        {
+          "slug": "real-time-strategy",
+          "count": 2077
+        },
+        {
+          "slug": "tactical",
+          "count": 6558
+        },
+        {
+          "slug": "visual-novel",
+          "count": 9957
+        },
+        {
+          "slug": "tower-defense",
+          "count": 7982
+        },
+        {
+          "slug": "city-builder",
+          "count": 3143
+        },
+        {
+          "slug": "deckbuilding",
+          "count": 1947
+        },
+        {
+          "slug": "open-world",
+          "count": 9105
+        },
+        {
+          "slug": "sandbox",
+          "count": 8454
+        },
+        {
+          "slug": "survival",
+          "count": 10745
+        },
+        {
+          "slug": "stealth",
+          "count": 7086
+        }
+      ]
+    },
+    {
+      "id": "demand",
+      "label": "How much it asks of you",
+      "tags": [
+        {
+          "slug": "difficult",
+          "count": 14217
+        },
+        {
+          "slug": "short",
+          "count": 57969
+        },
+        {
+          "slug": "story-rich",
+          "count": 26989
+        },
+        {
+          "slug": "exploration",
+          "count": 29065
+        }
+      ]
+    },
+    {
+      "id": "company",
+      "label": "Alone or with someone",
+      "tags": [
+        {
+          "slug": "singleplayer",
+          "count": 249183
+        },
+        {
+          "slug": "co-op",
+          "count": 14209
+        },
+        {
+          "slug": "local-co-op",
+          "count": 6025
+        },
+        {
+          "slug": "online-co-op",
+          "count": 7609
+        },
+        {
+          "slug": "split-screen",
+          "count": 7995
+        },
+        {
+          "slug": "local-multiplayer",
+          "count": 13952
+        },
+        {
+          "slug": "multiplayer",
+          "count": 42090
+        },
+        {
+          "slug": "pvp",
+          "count": 11967
+        }
+      ]
+    },
+    {
+      "id": "setting",
+      "label": "Where it takes place",
+      "tags": [
+        {
+          "slug": "sci-fi",
+          "count": 21855
+        },
+        {
+          "slug": "fantasy",
+          "count": 32666
+        },
+        {
+          "slug": "horror",
+          "count": 48844
+        },
+        {
+          "slug": "post-apocalyptic",
+          "count": 4883
+        },
+        {
+          "slug": "cyberpunk",
+          "count": 5189
+        },
+        {
+          "slug": "medieval",
+          "count": 8025
+        },
+        {
+          "slug": "historical",
+          "count": 3934
+        },
+        {
+          "slug": "space",
+          "count": 43993
+        },
+        {
+          "slug": "western",
+          "count": 1420
+        }
+      ]
+    },
+    {
+      "id": "look",
+      "label": "How it looks",
+      "tags": [
+        {
+          "slug": "pixel-graphics",
+          "count": 98966
+        },
+        {
+          "slug": "2d",
+          "count": 207082
+        },
+        {
+          "slug": "first-person",
+          "count": 37151
+        },
+        {
+          "slug": "third-person",
+          "count": 14518
+        },
+        {
+          "slug": "isometric",
+          "count": 5267
+        },
+        {
+          "slug": "anime",
+          "count": 16914
+        },
+        {
+          "slug": "retro",
+          "count": 44435
+        }
+      ]
+    }
+  ]
+}
