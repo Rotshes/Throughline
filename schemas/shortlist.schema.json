@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://throughline.local/schemas/shortlist.schema.json",
+  "title": "Shortlist",
+  "$comment": "What the model is allowed to return. Note what is NOT here: no title, no platforms, no year, no genres. The catalogue already holds all of those and the model is never asked for a value the system already has — asking invites it to be wrong about a fact we could have looked up. The id is the join. Note also what is not bounded: the length of `case`. A numeric limit in a prompt is a request rather than a constraint (pitfall 15), and a schema that rejects a 121-word case costs two calls to discover a style preference. Length guidance lives in the prompt, unenforced, on purpose.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["picks"],
+  "properties": {
+    "picks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "$comment": "Three normally. Fewer only when the candidate set held fewer — criterion 5 says a thin result is reported, never padded. The prompt states how many to return for the set it was given; this bound only stops a runaway.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "angle", "case"],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "$comment": "Must appear in the candidate set that was sent. The schema cannot express that; src/shortlist.js checks it. Criterion 2."
+          },
+          "angle": {
+            "type": "string",
+            "$comment": "Must be an angle id from data/angles.json, and must not repeat within one shortlist. Checked in code against the pinned file rather than enumerated here, so adding an angle is one file rather than two. Criterion 6."
+          },
+          "case": {
+            "type": "string",
+            "minLength": 40,
+            "$comment": "The argument for playing this game. Only a floor, and a low one: an empty or one-word case is a failure of the task rather than a style question, which is the distinction pitfall 15 draws."
+          }
+        }
+      }
+    }
+  }
+}

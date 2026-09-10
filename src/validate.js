@@ -9,62 +9,12 @@ const Ajv = AjvModule.default ?? AjvModule;
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 
-const motifsSchema = JSON.parse(readData("schemas/motifs.schema.json"));
-const recommendationSchema = JSON.parse(readData("schemas/recommendation.schema.json"));
+const shortlistSchema = JSON.parse(readData("schemas/shortlist.schema.json"));
 
-export const validateMotifsShape = ajv.compile(motifsSchema);
-export const validateRecommendationShape = ajv.compile(recommendationSchema);
+export const validateShortlistShape = ajv.compile(shortlistSchema);
 
 export function errorsToText(validator) {
   return (validator.errors || []).map(e => `${e.instancePath || "/"} ${e.message}`).join("; ");
-}
-
-/**
- * Criterion 7b. Checked before any model call, because a single game cannot
- * produce a motif that satisfies criterion 3 — so the call could not succeed
- * and would only cost money.
- */
-export function checkGameCount(games) {
-  if (!Array.isArray(games)) return { ok: false, reason: "games must be a list" };
-  if (games.length < 2) return { ok: false, reason: `Path A needs at least two games; got ${games.length}.` };
-  if (games.length > 5) return { ok: false, reason: `Path A takes at most five games; got ${games.length}.` };
-  return { ok: true };
-}
-
-/**
- * Criterion 3, enforced here rather than in the schema.
- *
- * The schema is shared with path B, where evidence sources are question ids and
- * there are no games to cite — so this rule cannot live in the schema without
- * breaking the other path. See the $comment in motifs.schema.json.
- *
- * Matching is case- and whitespace-insensitive so that "slay the spire" cited
- * against an input of "Slay the Spire" is not treated as an invented source.
- */
-export function checkPathAEvidence(motifs, inputGames) {
-  const norm = s => String(s).trim().toLowerCase();
-  const inputs = new Set(inputGames.map(norm));
-  const problems = [];
-
-  for (const motif of motifs) {
-    const cited = new Set();
-    for (const item of motif.evidence) {
-      const source = norm(item.source);
-      if (!inputs.has(source)) {
-        problems.push(`Motif "${motif.name}" cites "${item.source}", which is not one of the input games.`);
-        continue;
-      }
-      cited.add(source);
-      if (norm(item.detail).includes(norm(motif.name))) {
-        problems.push(`Motif "${motif.name}" has evidence from "${item.source}" that restates the motif name instead of giving a detail.`);
-      }
-    }
-    if (cited.size < 2) {
-      problems.push(`Motif "${motif.name}" cites ${cited.size} distinct input game(s); criterion 3 requires at least 2.`);
-    }
-  }
-
-  return { ok: problems.length === 0, problems };
 }
 
 /**
@@ -80,43 +30,4 @@ export function parseJsonStrict(text) {
   } catch (e) {
     return { ok: false, reason: `not valid JSON: ${e.message}` };
   }
-}
-
-/**
- * Criteria 7 and 7a, enforced in code because they are cross-references the
- * schema cannot express: the schema does not know what is in the candidate set
- * or which motifs stage 1 produced.
- *
- * This is the check that stops the model recommending a game that does not
- * exist, and stops it claiming to satisfy motifs it was never given.
- */
-export function checkRecommendation(rec, candidateTitles, motifNames) {
-  const norm = s => String(s).trim().toLowerCase();
-  const titles = new Set(candidateTitles.map(norm));
-  const motifs = new Set(motifNames.map(norm));
-  const problems = [];
-
-  if (rec.outcome === "recommended") {
-    if (!rec.title || !titles.has(norm(rec.title))) {
-      problems.push(`Recommended "${rec.title}", which is not in the candidate set.`);
-    }
-    if (rec.satisfies.length === 0) {
-      problems.push("A recommendation must name at least one motif it satisfies.");
-    }
-  } else if (rec.outcome === "no_good_fit") {
-    if (rec.satisfies.length > 0) {
-      problems.push("A decline must not claim to satisfy any motif.");
-    }
-    if (rec.title != null && !titles.has(norm(rec.title))) {
-      problems.push(`Declined but named "${rec.title}", which is not in the candidate set.`);
-    }
-  }
-
-  for (const name of rec.satisfies) {
-    if (!motifs.has(norm(name))) {
-      problems.push(`Claims to satisfy "${name}", which stage 1 did not produce.`);
-    }
-  }
-
-  return { ok: problems.length === 0, problems };
 }

@@ -268,6 +268,10 @@ export function toCandidate(raw, vocabulary) {
     tags: narrowTags(raw.tags, vocabulary),
     ratingCount: raw.ratings_count ?? 0,
     metacritic: raw.metacritic ?? null,
+    // Hours, per the catalogue. Frequently 0, which means unknown rather than
+    // instant — the fan game in turn 005's inspection had playtime 0. Anything
+    // reading this must treat 0 as "no information", never as a small number.
+    playtime: Number.isFinite(raw.playtime) ? raw.playtime : 0,
   };
 }
 

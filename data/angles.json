@@ -1,0 +1,53 @@
+{
+  "$comment": "The angle vocabulary. The model picks three of these, one per game, and may use no other label. Criterion 6. A free-text 'reason' field would give a gate that passes on 'atmospheric', 'very atmospheric' and 'atmosphere-focused', which is why this is a fixed list checked by membership.",
+  "howChecked": "Each angle is either constrained or judgement. A constrained angle names a condition code can test against catalogue data, so the model calling a singleplayer game 'the one to play with someone' is caught. A judgement angle names nothing checkable and code only verifies the label is in this list and does not repeat. Which is which is written down rather than left implicit, because a gate whose reach is unclear gets trusted further than it earns.",
+  "warning": "Constrained angles inherit pitfall 18. Tags fail in both directions: a genuinely co-operative game that RAWG has not tagged will be rejected, the same way Hades is not tagged difficult. Every rejection is logged with the reason so the false-rejection rate is measurable rather than assumed.",
+  "angles": [
+    {
+      "id": "safe-pick",
+      "label": "the safe pick",
+      "meaning": "The most squarely what they asked for. If they only play one, this one.",
+      "constraint": null
+    },
+    {
+      "id": "deep-cut",
+      "label": "the deep cut",
+      "meaning": "Less known than the others, same appeal. The one they probably have not heard of.",
+      "constraint": null
+    },
+    {
+      "id": "beautiful-one",
+      "label": "the beautiful one",
+      "meaning": "Worth playing for how it looks and sounds alone.",
+      "constraint": null
+    },
+    {
+      "id": "with-someone",
+      "label": "the one to play with someone",
+      "meaning": "Playable with another person, in the same room or online.",
+      "constraint": {
+        "kind": "anyTag",
+        "tags": ["co-op", "local-co-op", "online-co-op", "multiplayer", "split-screen", "local-multiplayer", "pvp"]
+      }
+    },
+    {
+      "id": "hard-one",
+      "label": "the hard one",
+      "meaning": "The one that will actually fight back.",
+      "constraint": {
+        "kind": "anyTag",
+        "tags": ["difficult", "souls-like"]
+      }
+    },
+    {
+      "id": "short-one",
+      "label": "the short one",
+      "meaning": "Finishable in an evening or two, for someone without sixty hours.",
+      "constraint": {
+        "kind": "maxPlaytime",
+        "hours": 12,
+        "$comment": "RAWG reports playtime in hours and it is frequently 0, meaning unknown rather than instant. A candidate with playtime 0 fails this constraint rather than passing it — an unknown length is not evidence of a short game. See src/shortlist.js."
+      }
+    }
+  ]
+}
