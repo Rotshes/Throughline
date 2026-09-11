@@ -1,155 +1,282 @@
 :root {
-  --bg: #14151a;
-  --panel: #1c1e25;
-  --panel-2: #23262f;
-  --line: #2e313b;
-  --text: #e8e9ed;
-  --muted: #9aa0ae;
-  --dim: #6f7583;
-  --accent: #7dd3a0;
-  --accent-ink: #0d1a13;
-  --warn: #e5a04a;
-  --bad: #e8756b;
-  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --ink: #16161a;
+  --quiet: #6b6b76;
+  --line: #e0e0e6;
+  --paper: #fbfbfd;
+  --card: #ffffff;
+  --accent: #2f4858;
+  --warn: #8a3324;
+  --radius: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #ecedf1;
+    --quiet: #9a9aa6;
+    --line: #2c2c34;
+    --paper: #131317;
+    --card: #1b1b21;
+    --accent: #9fc0d4;
+    --warn: #e0937f;
+  }
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-.page { max-width: 44rem; margin: 0 auto; padding: 3rem 1.25rem 6rem; }
-
-header h1 {
-  font-family: var(--serif);
-  font-size: 2.6rem;
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  margin: 0 0 0.4rem;
-}
-.lede { color: var(--muted); margin: 0 0 2.5rem; max-width: 34rem; }
-
-/* form */
-fieldset { border: 0; padding: 0; margin: 0 0 1.25rem; }
-fieldset[disabled] { opacity: 0.55; }
-legend {
-  padding: 0; margin-bottom: 0.75rem;
-  font-size: 0.78rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--dim);
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 20px 64px;
 }
 
-.row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+/* --- masthead --- */
 
-input {
-  flex: 1;
-  background: var(--panel);
+.masthead h1 {
+  margin: 0 0 6px;
+  font-size: 30px;
+  letter-spacing: -0.02em;
+}
+
+.tagline {
+  margin: 0 0 32px;
+  color: var(--quiet);
+  max-width: 46ch;
+}
+
+/* --- the form --- */
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+  background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 7px;
-  padding: 0.7rem 0.85rem;
-  color: var(--text);
-  font-size: 1rem;
-  font-family: inherit;
+  border-radius: var(--radius);
 }
-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
-input::placeholder { color: var(--dim); }
 
-button {
-  background: var(--accent);
-  color: var(--accent-ink);
-  border: 0;
-  border-radius: 7px;
-  padding: 0.7rem 1.15rem;
-  font-size: 0.97rem;
+fieldset { border: 0; padding: 0; margin: 0; }
+
+legend {
+  padding: 0;
+  margin-bottom: 10px;
   font-weight: 600;
-  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+
+.optional {
+  font-weight: 400;
+  color: var(--quiet);
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+select {
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  color: inherit;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.chip {
+  padding: 7px 13px;
+  font: inherit;
+  font-size: 14px;
+  color: inherit;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 999px;
   cursor: pointer;
 }
-button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-button.ghost {
+.chip:hover:not(:disabled) { border-color: var(--accent); }
+.chip:disabled { opacity: 0.35; cursor: default; }
+
+.chip.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--paper);
+}
+
+.facets { display: flex; flex-direction: column; gap: 6px; }
+
+.facet-head {
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 14px;
+  color: inherit;
   background: transparent;
-  color: var(--muted);
   border: 1px solid var(--line);
-  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
 }
-button.ghost:hover { color: var(--text); border-color: var(--dim); }
 
-.submit { display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap; }
-.hint { color: var(--dim); font-size: 0.87rem; }
+.facet-head.open { border-color: var(--accent); margin-bottom: 8px; }
 
-/* panels */
-.panel {
-  background: var(--panel);
+.facet-head .count {
+  float: right;
+  min-width: 20px;
+  text-align: center;
+  background: var(--accent);
+  color: var(--paper);
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.facet .chips { margin: 0 0 12px 8px; }
+
+.hint { margin: 10px 0 0; font-size: 13px; color: var(--quiet); }
+.hint.warn { color: var(--warn); }
+.quiet { color: var(--quiet); }
+
+.go {
+  padding: 12px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--paper);
+  background: var(--accent);
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.go:disabled { opacity: 0.45; cursor: default; }
+
+/* --- waiting --- */
+
+.waiting {
+  margin-top: 28px;
+  padding: 20px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+.waiting p { margin: 0 0 4px; }
+
+/* --- results --- */
+
+.results { margin-top: 32px; display: flex; flex-direction: column; gap: 20px; }
+
+/* A thin result is a valid answer, not a failure — so it is marked, not alarmed.
+   Deliberately not the warning colour: nothing went wrong, there simply is not
+   much there. */
+.thin {
+  margin: 0;
+  padding: 14px 16px;
+  font-size: 14px;
+  color: var(--quiet);
+  background: var(--card);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+.pick {
+  padding: 22px;
+  background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 11px;
-  padding: 1.4rem 1.5rem;
-  margin-top: 1.25rem;
-}
-.panel h2 { font-family: var(--serif); font-weight: 400; font-size: 2rem; margin: 0.2rem 0 0.7rem; }
-.panel h3 { font-size: 0.78rem; letter-spacing: 0.09em; text-transform: uppercase;
-             color: var(--dim); margin: 0 0 1rem; font-weight: 500; }
-.panel p { margin: 0 0 0.8rem; }
-.panel p:last-child { margin-bottom: 0; }
-
-.eyebrow { font-size: 0.78rem; letter-spacing: 0.09em; text-transform: uppercase;
-           color: var(--accent); margin: 0; font-weight: 600; }
-
-/* A recommendation and a decline must not be mistakable for each other.
-   Different accent, different heading, and only one of them offers an action. */
-.headline.recommended { border-color: rgba(125, 211, 160, 0.45); }
-.headline.declined { border-color: rgba(232, 117, 107, 0.45); }
-.headline.declined h2 { color: var(--bad); }
-
-.satisfies { list-style: none; padding: 0; margin: 1rem 0 1.3rem; display: flex;
-             flex-wrap: wrap; gap: 0.4rem; }
-.satisfies li {
-  background: var(--panel-2); border: 1px solid var(--line);
-  border-radius: 999px; padding: 0.3rem 0.8rem; font-size: 0.87rem; color: var(--muted);
+  border-radius: var(--radius);
 }
 
-.committed { color: var(--accent); font-weight: 600; }
+.pick.chosen { border-color: var(--accent); }
 
-.motif { padding-bottom: 1.1rem; margin-bottom: 1.1rem; border-bottom: 1px solid var(--line); }
-.motif:last-of-type { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
-.motif h4 { font-size: 1.05rem; margin: 0 0 0.35rem; font-weight: 600; }
-.motif p { color: var(--muted); }
-
-.evidence { list-style: none; padding: 0; margin: 0.7rem 0 0; }
-.evidence li { font-size: 0.92rem; color: var(--muted); padding: 0.3rem 0 0.3rem 0.9rem;
-               border-left: 2px solid var(--line); margin-bottom: 0.3rem; }
-.source { color: var(--text); font-weight: 600; }
-
-.working { border-style: dashed; }
-.failure { border-color: rgba(232, 117, 107, 0.4); }
-.failure h2 { color: var(--bad); }
-
-.meta { background: transparent; border: 0; padding: 0.6rem 0 0;
-        font-size: 0.85rem; color: var(--dim); }
-.meta p { margin: 0 0 0.2rem; }
-
-.muted { color: var(--muted); }
-.note { margin-top: 1.1rem; font-size: 0.9rem; }
-.warn { color: var(--warn); }
-
-@media (max-width: 30rem) {
-  .page { padding-top: 2rem; }
-  header h1 { font-size: 2rem; }
-  .panel h2 { font-size: 1.6rem; }
+.angle {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
+
+.pick h2 { margin: 0 0 14px; font-size: 21px; letter-spacing: -0.01em; }
+.pick .year { color: var(--quiet); font-weight: 400; font-size: 15px; }
+
+.pick img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--line);
+}
+
+.case { margin: 16px 0 12px; }
+
+.facts { margin: 0 0 16px; font-size: 13px; color: var(--quiet); }
+
+.choose {
+  padding: 9px 16px;
+  font: inherit;
+  font-size: 14px;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.choose:hover:not(:disabled) { border-color: var(--accent); }
+
+.choose.chosen {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--paper);
+  cursor: default;
+}
+
+.meta { margin: 4px 0 0; font-size: 12.5px; color: var(--quiet); }
+.meta.warn { color: var(--warn); }
+
+/* --- failure ---
+   Deliberately not styled like a result. Criterion 12: a failure must not be
+   readable as a weak shortlist, and shape carries that faster than words. */
+
+.failure {
+  margin-top: 32px;
+  padding: 22px;
+  background: var(--card);
+  border: 1px solid var(--warn);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+}
+
+.failure h2 { margin: 0 0 10px; font-size: 18px; color: var(--warn); }
+.failure p { margin: 0 0 10px; }
 
 .reason {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
   white-space: pre-wrap;
-  word-break: break-word;
-  font: 0.87rem/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  padding: 0.8rem 0.9rem;
-  margin: 0 0 0.8rem;
-  max-height: 22rem;
-  overflow: auto;
-  color: var(--muted);
+  color: var(--quiet);
 }
+
+.problems { margin: 0; padding-left: 20px; font-size: 13.5px; color: var(--quiet); }
+.problems li { margin-bottom: 4px; }
+
+/* --- footer --- */
+
+footer {
+  margin-top: 48px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--quiet);
+}
+
+footer p { margin: 0 0 8px; }
+footer a { color: var(--accent); }

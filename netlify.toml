@@ -13,21 +13,23 @@
   publish  = "web/dist"
   functions = "netlify/functions"
 
-# The pipeline reads its prompts, schemas and candidate list from disk at
-# request time. Without these the bundled function would deploy cleanly and then
-# fail on the first request. See src/paths.js.
+# The pipeline reads its prompt, schema and the three pinned vocabularies from
+# disk at request time. Without these the bundled function would deploy cleanly
+# and then fail on the first request. See src/paths.js — and note that
+# data/categories.json, platforms.json, tags.json and angles.json are all
+# required, not optional.
 [functions]
   node_bundler = "esbuild"
   included_files = ["prompts/**", "schemas/**", "data/**"]
 
 [[redirects]]
-  from = "/api/recommend/accept"
-  to   = "/.netlify/functions/recommend/accept"
+  from = "/api/shortlist/click"
+  to   = "/.netlify/functions/shortlist/click"
   status = 200
 
 [[redirects]]
-  from = "/api/recommend"
-  to   = "/.netlify/functions/recommend"
+  from = "/api/shortlist"
+  to   = "/.netlify/functions/shortlist"
   status = 200
 
 # Single-page app: everything else serves the built index.

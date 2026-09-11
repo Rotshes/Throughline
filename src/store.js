@@ -55,28 +55,33 @@ async function insert(table, rows) {
   return { ok: true, rows: await res.json() };
 }
 
-export async function saveSession(session) {
-  const r = await insert("sessions", [session]);
+export async function saveRequest(request) {
+  const r = await insert("requests", [request]);
   return r.ok && r.rows?.[0] ? { ok: true, id: r.rows[0].id } : r;
 }
 
-export async function saveCalls(sessionId, calls) {
+export async function saveCalls(requestId, calls) {
   // The in-memory row uses `at`; the table column is `created_at`. Mapped here
   // rather than renaming the field, so the local JSONL log keeps the shape it
-  // has had since turn 001 and old rows stay readable alongside new ones.
+  // has had since turn 001 and rows from the motif design stay readable
+  // alongside these.
   const rows = calls.map(({ at, ...rest }) => ({
     ...rest,
     created_at: at,
-    session_id: sessionId,
+    request_id: requestId,
   }));
   return insert("model_calls", rows);
 }
 
-/** Criterion 14. Records the Commit to Play click against an existing session. */
-export async function recordAcceptance(sessionId) {
+/**
+ * Criterion 15. Records which of the three was clicked, against an existing
+ * request. Which one, not whether — a count of people who liked something says
+ * nothing without knowing what they picked over what.
+ */
+export async function recordClick(requestId, pickId) {
   if (!storeConfigured()) return { ok: true, skipped: true };
   const res = await fetch(
-    `${baseUrl()}/rest/v1/sessions?id=eq.${encodeURIComponent(sessionId)}`,
+    `${baseUrl()}/rest/v1/requests?id=eq.${encodeURIComponent(requestId)}`,
     {
       method: "PATCH",
       headers: {
@@ -85,10 +90,10 @@ export async function recordAcceptance(sessionId) {
         "Content-Type": "application/json",
         Prefer: "return=representation",
       },
-      body: JSON.stringify({ accepted: true, accepted_at: new Date().toISOString() }),
+      body: JSON.stringify({ clicked_id: pickId, clicked_at: new Date().toISOString() }),
     }
   );
   if (!res.ok) return { ok: false, reason: `HTTP ${res.status} ${await res.text()}` };
   const rows = await res.json();
-  return rows.length === 1 ? { ok: true } : { ok: false, reason: "no such session" };
+  return rows.length === 1 ? { ok: true } : { ok: false, reason: "no such request" };
 }

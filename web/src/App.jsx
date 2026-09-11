@@ -1,202 +1,267 @@
-import { useState, useEffect, useRef } from "react";
-import { requestRecommendation, commitToPlay } from "./api.js";
+import { useState, useMemo } from "react";
+import { requestShortlist, recordClick } from "./api.js";
 
-const MIN_GAMES = 2;
-const MAX_GAMES = 5;
+// The three pinned vocabularies, baked in at build time. See vite.config.js for
+// why these are imported rather than fetched. Whatever is in these files is the
+// entire vocabulary this product understands — spec.md part 5, pitfall 9.
+import categoriesFile from "../../data/categories.json";
+import platformsFile from "../../data/platforms.json";
+import tagsFile from "../../data/tags.json";
+
+// Platforms someone might actually own. The catalogue offers fourteen including
+// 3DO, Neo Geo and Commodore/Amiga; showing those makes the form longer and the
+// results emptier. Ordered by how likely a person is to be holding one.
+const PLATFORM_ORDER = ["pc", "playstation", "xbox", "nintendo", "ios", "android", "mac", "linux", "web"];
+
+const CATEGORIES = categoriesFile.categories;
+const PLATFORMS = PLATFORM_ORDER
+  .map(slug => platformsFile.platforms.find(p => p.slug === slug))
+  .filter(Boolean);
+const FACETS = tagsFile.facets;
+
+const MAX_TAGS = 6;
 
 export default function App() {
-  const [games, setGames] = useState(["", ""]);
-  const [state, setState] = useState("idle"); // idle | working | done
-  const [result, setResult] = useState(null);
-  const [committed, setCommitted] = useState(false);
+  const [category, setCategory] = useState("action");
+  const [platforms, setPlatforms] = useState(["pc"]);
+  const [tags, setTags] = useState([]);
+  const [openFacet, setOpenFacet] = useState(null);
 
-  const filled = games.map(g => g.trim()).filter(Boolean);
-  // Criterion 7b, checked in the form so no call is made for a request that
-  // cannot succeed. Also checked in the function; the browser is never trusted.
-  const canSubmit = filled.length >= MIN_GAMES && state !== "working";
+  const [state, setState] = useState({ status: "idle" });
+  const [clicked, setClicked] = useState(null);
+  const [elapsed, setElapsed] = useState(0);
 
-  function setGame(i, value) {
-    setGames(g => g.map((v, j) => (j === i ? value : v)));
+  const canSubmit = platforms.length > 0 && state.status !== "waiting";
+
+  const selectedTagLabels = useMemo(
+    () => FACETS.flatMap(f => f.tags).filter(t => tags.includes(t.slug)).map(t => t.slug),
+    [tags]
+  );
+
+  function togglePlatform(slug) {
+    setPlatforms(p => (p.includes(slug) ? p.filter(x => x !== slug) : [...p, slug]));
+  }
+
+  function toggleTag(slug) {
+    setTags(t => {
+      if (t.includes(slug)) return t.filter(x => x !== slug);
+      if (t.length >= MAX_TAGS) return t;
+      return [...t, slug];
+    });
   }
 
   async function submit(e) {
     e.preventDefault();
     if (!canSubmit) return;
-    setState("working");
-    setResult(null);
-    setCommitted(false);
-    setResult(await requestRecommendation(filled));
-    setState("done");
+
+    setClicked(null);
+    setState({ status: "waiting" });
+
+    // An honest counter rather than a progress bar. Nothing streams, so a bar
+    // would be inventing information the page does not have.
+    setElapsed(0);
+    const started = Date.now();
+    const ticker = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 250);
+
+    const result = await requestShortlist({ category, platforms, tags });
+    clearInterval(ticker);
+    setState({ status: "done", result });
+  }
+
+  async function choose(pick, requestId) {
+    setClicked(pick.id);
+    if (requestId) await recordClick(requestId, pick.id);
   }
 
   return (
-    <div className="page">
-      <header>
+    <main>
+      <header className="masthead">
         <h1>Throughline</h1>
-        <p className="lede">
-          Name two to five games you have enjoyed. This works out what they share
-          underneath their genre labels, then finds one more like them — or says
-          plainly that it cannot.
+        <p className="tagline">
+          Say what kind of game you want and what you can play it on. Three specific
+          answers, and the case for each.
         </p>
       </header>
 
-      <form onSubmit={submit}>
-        <fieldset disabled={state === "working"}>
-          <legend>Games you have played and enjoyed</legend>
-          {games.map((g, i) => (
-            <div className="row" key={i}>
-              <input
-                value={g}
-                onChange={e => setGame(i, e.target.value)}
-                placeholder={i < 2 ? "required" : "optional"}
-                aria-label={`Game ${i + 1}`}
-                autoComplete="off"
-              />
-              {games.length > MIN_GAMES && (
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={() => setGames(gs => gs.filter((_, j) => j !== i))}
-                  aria-label={`Remove game ${i + 1}`}
-                >
-                  Remove
-                </button>
-              )}
-            </div>
-          ))}
+      <form onSubmit={submit} className="filters">
+        <fieldset>
+          <legend>What kind of game</legend>
+          <select value={category} onChange={e => setCategory(e.target.value)}>
+            {CATEGORIES.map(c => (
+              <option key={c.slug} value={c.slug}>{c.name}</option>
+            ))}
+          </select>
+        </fieldset>
 
-          {games.length < MAX_GAMES && (
-            <button type="button" className="ghost" onClick={() => setGames(g => [...g, ""])}>
-              Add another
-            </button>
+        <fieldset>
+          <legend>What you can play it on</legend>
+          <div className="chips">
+            {PLATFORMS.map(p => (
+              <button
+                key={p.slug}
+                type="button"
+                className={platforms.includes(p.slug) ? "chip on" : "chip"}
+                aria-pressed={platforms.includes(p.slug)}
+                onClick={() => togglePlatform(p.slug)}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+          {platforms.length === 0 && (
+            <p className="hint warn">Choose at least one.</p>
           )}
         </fieldset>
 
-        <div className="submit">
-          <button type="submit" disabled={!canSubmit}>
-            {state === "working" ? "Working…" : "Find something"}
-          </button>
-          {filled.length < MIN_GAMES && (
-            <span className="hint">
-              {MIN_GAMES - filled.length} more needed — one game shares nothing with itself.
-            </span>
+        <fieldset>
+          <legend>
+            Anything more particular <span className="optional">optional</span>
+          </legend>
+          <div className="facets">
+            {FACETS.map(f => {
+              const chosenHere = f.tags.filter(t => tags.includes(t.slug)).length;
+              const open = openFacet === f.id;
+              return (
+                <div key={f.id} className="facet">
+                  <button
+                    type="button"
+                    className={open ? "facet-head open" : "facet-head"}
+                    onClick={() => setOpenFacet(open ? null : f.id)}
+                    aria-expanded={open}
+                  >
+                    {f.label}
+                    {chosenHere > 0 && <span className="count">{chosenHere}</span>}
+                  </button>
+                  {open && (
+                    <div className="chips">
+                      {f.tags.map(t => {
+                        const on = tags.includes(t.slug);
+                        const full = !on && tags.length >= MAX_TAGS;
+                        return (
+                          <button
+                            key={t.slug}
+                            type="button"
+                            className={on ? "chip on" : "chip"}
+                            aria-pressed={on}
+                            disabled={full}
+                            onClick={() => toggleTag(t.slug)}
+                          >
+                            {t.slug.replace(/-/g, " ")}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {tags.length > 0 && (
+            <p className="hint">
+              {selectedTagLabels.join(", ")}
+              {tags.length > 1 && (
+                <>
+                  {" — "}
+                  <span className="quiet">
+                    games matching more of these come first; games matching one still appear
+                  </span>
+                </>
+              )}
+            </p>
           )}
-        </div>
+          {tags.length >= MAX_TAGS && <p className="hint warn">Six at most.</p>}
+        </fieldset>
+
+        <button type="submit" className="go" disabled={!canSubmit}>
+          {state.status === "waiting" ? "Looking…" : "Find me three"}
+        </button>
       </form>
 
-      {state === "working" && <Working />}
-      {state === "done" && result && (
-        <Result
-          result={result}
-          inputGames={filled}
-          committed={committed}
-          onCommit={async () => {
-            if (await commitToPlay(result.sessionId)) setCommitted(true);
-          }}
-        />
+      {state.status === "waiting" && (
+        <section className="waiting">
+          <p>Reading the catalogue, then asking the model once.</p>
+          <p className="quiet">Usually 8–20 seconds. {elapsed}s so far.</p>
+        </section>
       )}
-    </div>
+
+      {state.status === "done" && <Result result={state.result} clicked={clicked} onChoose={choose} />}
+
+      <footer>
+        {/* Required by RAWG's free tier: an active link back to them from every
+            page that shows their data. A licence condition, not a courtesy. */}
+        <p>
+          Game data and images from{" "}
+          <a href="https://rawg.io/" target="_blank" rel="noreferrer">RAWG</a>.
+        </p>
+        <p className="quiet">
+          ASE-26 coursework. The three arguments are written by a language model
+          from a candidate set this app assembled; it is told to describe only what
+          you could see for yourself, and nothing checks whether it succeeded.
+        </p>
+      </footer>
+    </main>
   );
 }
 
-/**
- * Two model calls run one after the other, and together they take roughly
- * 15 to 25 seconds. That is long enough that a still screen reads as broken.
- *
- * The elapsed counter is deliberately honest: nothing here streams, so a fake
- * progress bar would be inventing information. Saying what is happening and how
- * long it usually takes is the truthful version.
- */
-function Working() {
-  const [seconds, setSeconds] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setSeconds(s => s + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
+function Result({ result, clicked, onChoose }) {
+  // Criterion 12: a failure is shown as a failure. Never an empty or partial
+  // shortlist dressed up as a result.
+  if (!result.ok) return <Failure result={result} />;
+
+  const m = result.meta ?? {};
+  const thin = result.picks.length < 3;
 
   return (
-    <section className="panel working" aria-live="polite">
-      <p><strong>Reading your games, then searching the list.</strong></p>
-      <p className="muted">
-        Two model calls, one after the other. Usually 15–25 seconds. {seconds}s so far.
-      </p>
-    </section>
-  );
-}
+    <section className="results">
+      {/* Pitfall 10 reaching a person. Criterion 5 forbids padding a thin
+          result, so the honest alternative is saying it is thin. A shortlist
+          drawn from a pool barely larger than itself is not a choice, and
+          leaving that in the small grey line at the bottom would let it read
+          as one. */}
+      {thin && (
+        <p className="thin">
+          {result.picks.length === 1
+            ? "Only one game matched those filters, so there is nothing to choose between."
+            : `Only ${result.picks.length} games matched those filters.`}{" "}
+          Nothing was loosened to fill the gap. Fewer tags, or another platform,
+          would give more to pick from.
+        </p>
+      )}
 
-function Result({ result, inputGames, committed, onCommit }) {
-  const panel = useRef(null);
-  useEffect(() => { panel.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }, []);
-
-  if (!result.ok) return <div ref={panel}><Failure result={result} /></div>;
-
-  const rec = result.recommendation;
-  const declined = rec.outcome === "no_good_fit";
-
-  return (
-    <div ref={panel}>
-      {/* Criterion 7a: a decline is shown as a decline. Different heading,
-          different styling, no Commit to Play control. It must never be
-          mistakable for a lukewarm recommendation. */}
-      <section className={`panel headline ${declined ? "declined" : "recommended"}`}>
-        {declined ? (
-          <>
-            <h2>Nothing here fits</h2>
-            <p>{rec.rationale}</p>
-            {rec.title && <p className="muted">Closest was {rec.title}, and it still was not close enough.</p>}
-          </>
-        ) : (
-          <>
-            <p className="eyebrow">Play this</p>
-            <h2>{rec.title}</h2>
-            <p>{rec.rationale}</p>
-            <ul className="satisfies">
-              {rec.satisfies.map(s => <li key={s}>{s}</li>)}
-            </ul>
-            {committed ? (
-              <p className="committed">Noted — recorded as a yes.</p>
-            ) : (
-              <button onClick={onCommit}>Commit to play</button>
-            )}
-          </>
-        )}
-      </section>
-
-      <Motifs motifs={result.motifs} inputGames={inputGames} />
-      <Meta meta={result.meta} />
-    </div>
-  );
-}
-
-function Motifs({ motifs, inputGames }) {
-  if (!motifs?.length) return null;
-
-  // From turn 001: given three games where one shares nothing with the others,
-  // the motifs quietly cite only two and nothing tells the user why. Saying
-  // which games were actually drawn on costs a line and removes the mystery.
-  const cited = new Set(
-    motifs.flatMap(m => m.evidence.map(e => e.source.trim().toLowerCase()))
-  );
-  const unused = inputGames.filter(g => !cited.has(g.trim().toLowerCase()));
-
-  return (
-    <section className="panel">
-      <h3>What your games share</h3>
-      {motifs.map(m => (
-        <article key={m.name} className="motif">
-          <h4>{m.name}</h4>
-          <p>{m.description}</p>
-          <ul className="evidence">
-            {m.evidence.map((e, i) => (
-              <li key={i}><span className="source">{e.source}</span> {e.detail}</li>
-            ))}
-          </ul>
+      {result.picks.map(p => (
+        <article key={p.id} className={clicked === p.id ? "pick chosen" : "pick"}>
+          <p className="angle">{p.angleLabel}</p>
+          <h2>
+            {p.title} <span className="year">{p.released?.slice(0, 4)}</span>
+          </h2>
+          {p.image && <img src={p.image} alt={`${p.title} screenshot`} loading="lazy" />}
+          <p className="case">{p.case}</p>
+          <p className="facts">
+            {p.platforms.join(" · ")}
+            {p.metacritic ? ` · ${p.metacritic} metacritic` : ""}
+          </p>
+          <button
+            type="button"
+            className={clicked === p.id ? "choose chosen" : "choose"}
+            onClick={() => onChoose(p, result.requestId)}
+            disabled={clicked === p.id}
+          >
+            {clicked === p.id ? "Noted — this one" : "I'll play this one"}
+          </button>
         </article>
       ))}
-      {unused.length > 0 && (
-        <p className="muted note">
-          Nothing was drawn from {unused.join(" or ")} — no shared thread was found
-          with the others.
+
+      <p className="meta">
+        Chosen from {m.candidateCount ?? "?"} candidates
+        {m.shownFrom ? ` (the catalogue holds ${m.shownFrom} for those filters)` : ""}
+        {m.callsUsed != null ? ` · ${m.callsUsed} of ${m.callCap} model calls` : ""}
+        {m.latencyMs ? ` · ${(m.latencyMs / 1000).toFixed(1)}s` : ""}
+        {m.prompt ? ` · ${m.prompt}` : ""}
+      </p>
+      {m.recording && m.recording.ok === false && (
+        <p className="meta warn">
+          This result was not recorded: {m.recording.reason}
         </p>
       )}
     </section>
@@ -204,37 +269,49 @@ function Motifs({ motifs, inputGames }) {
 }
 
 function Failure({ result }) {
-  const zeroMotifs = result.stage === "zero-motifs";
-  return (
-    <section className="panel failure">
-      <h2>{zeroMotifs ? "These games share nothing I can name" : "That did not work"}</h2>
-      <pre className="reason">{result.failureReason}</pre>
-      {!zeroMotifs && (
-        <p className="muted">
-          Nothing was recommended, because a wrong answer here is worse than none.
-          Trying again is reasonable — this sometimes passes on a second run.
-        </p>
-      )}
-    </section>
-  );
-}
+  // Each stage gets its own words. With two external services behind this, a
+  // person who cannot tell which one broke cannot report anything useful —
+  // criterion 13. "Something went wrong" is the message that helps nobody.
+  const stage = result.stage;
 
-function Meta({ meta }) {
-  if (!meta) return null;
+  const headings = {
+    empty: "Nothing to show you",
+    catalogue: "The game database did not answer",
+    gate: "The model's answer was rejected",
+    parse: "The model's answer could not be read",
+    schema: "The model's answer was the wrong shape",
+    budget: "Stopped before spending more",
+    call: "The model did not answer",
+    server: "The server failed",
+    request: "That request was refused",
+    unexpected: "Something failed unexpectedly",
+  };
+
+  const explanations = {
+    empty:
+      "Either nothing in the catalogue matches those filters, or what does match is " +
+      "too obscure to write about honestly. Try fewer tags, or another platform.",
+    catalogue:
+      "That is the game database, not the model. Nothing was asked of the model and " +
+      "nothing was spent. It is usually worth trying again in a minute.",
+    gate:
+      "The model returned three games, and the checks refused them. That is the system " +
+      "working: a shortlist that fails a check is not shown as a partial result.",
+    budget: "The per-request cap on model calls was reached. Nothing further was spent.",
+  };
+
   return (
-    <section className="panel meta">
-      <p>
-        {meta.callsUsed} of {meta.callCap} model calls ·{" "}
-        {(meta.latencyMs / 1000).toFixed(1)}s ·{" "}
-        chosen from {meta.candidates} games
-        {meta.excluded ? ` (${meta.excluded} excluded as yours)` : ""}
-      </p>
-      <p className="muted">{meta.prompts?.analysis} · {meta.prompts?.matching}</p>
-      {/* Surfaced rather than swallowed. If recording failed, criterion 10 did
-          not hold for this request, and hiding that would make the audit trail
-          a fiction. */}
-      {meta.recording && meta.recording.ok === false && (
-        <p className="warn">This run was not recorded: {meta.recording.reason}</p>
+    <section className="failure">
+      <h2>{headings[stage] ?? "That did not work"}</h2>
+      {explanations[stage] && <p>{explanations[stage]}</p>}
+      <p className="reason">{result.failureReason}</p>
+      {result.problems?.length > 0 && (
+        <ul className="problems">
+          {result.problems.map((p, i) => <li key={i}>{p}</li>)}
+        </ul>
+      )}
+      {result.meta?.recording && result.meta.recording.ok === false && (
+        <p className="meta warn">This failure was not recorded: {result.meta.recording.reason}</p>
       )}
     </section>
   );
