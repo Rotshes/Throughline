@@ -1,7 +1,7 @@
 {
   "$comment": "Pinned from the catalogue by scripts/pin-vocabularies.js. This is the complete list of categories this product can understand — see docs/spec.md part 5, pitfall 9. Do not hand-add an entry the catalogue does not have; it will return nothing.",
   "source": "rawg",
-  "pinnedOn": "2026-09-10",
+  "pinnedOn": "2026-09-11",
   "categories": [
     {
       "slug": "action",

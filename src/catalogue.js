@@ -144,13 +144,79 @@ export async function fetchGenres() {
   }));
 }
 
+/**
+ * The platform tree: each family and the machines under it.
+ *
+ * `/platforms/lists/parents` returns the children inline, so the whole tree is
+ * one request. Families are what a person says out loud — "PlayStation" — and
+ * the children are what they actually own — a PS5, or a PS2 still under the
+ * television.
+ *
+ * Child order is the catalogue's own, which is roughly newest first — Switch
+ * before NES, PS5 before PSP. An earlier version reversed it on the assumption
+ * that the catalogue listed oldest first; running it showed otherwise, with the
+ * Switch thirteenth of thirteen under Nintendo. The assumption was the bug, and
+ * the fix is to stop having one.
+ */
 export async function fetchParentPlatforms() {
   const data = await request("/platforms/lists/parents", { page_size: 50 });
   return (data.results || []).map(p => ({
     id: p.id,
     slug: p.slug,
     name: p.name,
+    platforms: (p.platforms || []).map(c => ({ id: c.id, slug: c.slug, name: c.name })),
   }));
+}
+
+/**
+ * Trim a catalogue description to something a person will read.
+ *
+ * RAWG descriptions run to several paragraphs and often carry store copy,
+ * bullet lists and occasionally a second language after the English. Cut at a
+ * sentence boundary rather than mid-word, and prefer stopping early over
+ * running long: this sits beside the model's argument, and if it is longer than
+ * the argument it stops being context and becomes the page.
+ *
+ * Pure, so it is checked offline.
+ */
+export function trimDescription(raw, limit = 420) {
+  if (typeof raw !== "string") return null;
+  const text = raw.replace(/\s+/g, " ").trim();
+  if (!text) return null;
+  if (text.length <= limit) return text;
+
+  const window = text.slice(0, limit);
+  const lastStop = Math.max(window.lastIndexOf(". "), window.lastIndexOf("! "), window.lastIndexOf("? "));
+
+  // Cut at the sentence if that leaves something worth reading; otherwise take
+  // the window and mark it. The floor is an absolute number of characters, not
+  // a fraction of the limit: a description whose first sentence ends at 150
+  // should be cut there whether the limit is 420 or 800, and "Hi." should never
+  // be the whole synopsis just because the limit happened to be small.
+  const MIN_USEFUL = 120;
+  if (lastStop >= MIN_USEFUL) return window.slice(0, lastStop + 1);
+  return window.trimEnd() + "…";
+}
+
+/**
+ * The catalogue's own description of one game.
+ *
+ * The list endpoint carries no description — verified in turn 005 — so this is
+ * one request per game, made only for the three that were actually chosen.
+ * Never for the whole candidate set: twenty-four requests per shortlist would
+ * spend a monthly twenty thousand in under a thousand uses.
+ *
+ * Returns null on any failure rather than throwing. A shortlist that has passed
+ * every gate must not be lost because a description could not be fetched, and
+ * the caller reports which ones were missing instead.
+ */
+export async function fetchDescription(id) {
+  try {
+    const data = await request(`/games/${encodeURIComponent(id)}`, {});
+    return trimDescription(data?.description_raw);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -172,6 +238,7 @@ export async function fetchParentPlatforms() {
 export function buildPoolQuery({
   categorySlug,
   platformIds,
+  specific = false,
   tagSlugs = [],
   pageSize = 40,
   page = 1,
@@ -194,7 +261,18 @@ export function buildPoolQuery({
 
   const query = {
     genres: categorySlug,
-    parent_platforms: platformIds.join(","),
+    // Two parameters, never both. `parent_platforms` takes family ids — 2 is
+    // every PlayStation ever made — and `platforms` takes machine ids, where 187
+    // is a PS5 and nothing else.
+    //
+    // Sending both would raise a question this project has not measured: whether
+    // the catalogue combines them with AND or OR. Tags turned out to be OR,
+    // which was the opposite of what a reader expects (decision 0004), so no
+    // code here assumes anything about a second untested interaction. One
+    // parameter per request, and the caller resolves the mixture beforehand.
+    ...(specific
+      ? { platforms: platformIds.join(",") }
+      : { parent_platforms: platformIds.join(",") }),
     // Ordered by rating rather than relevance or release date. Popularity is the
     // proxy for "the model knows this game" — same reasoning as MIN_RATINGS.
     ordering: "-rating",
@@ -261,6 +339,12 @@ export function toCandidate(raw, vocabulary) {
     video: null,
     platforms: Array.isArray(raw.parent_platforms)
       ? raw.parent_platforms.map(p => p?.platform?.slug).filter(Boolean)
+      : [],
+    // The actual machines, as opposed to the families above. Criterion 3 is
+    // checked against whichever the user selected — saying a game is "on
+    // PlayStation" is no use to someone who asked for PS5 and owns only that.
+    machines: Array.isArray(raw.platforms)
+      ? raw.platforms.map(p => p?.platform?.slug).filter(Boolean)
       : [],
     categories: Array.isArray(raw.genres)
       ? raw.genres.map(g => g?.slug).filter(Boolean)
@@ -368,6 +452,7 @@ export function dominanceReport(candidates) {
 export async function assembleCandidates({
   categorySlug,
   platformIds,
+  specific = false,
   tagSlugs = [],
   vocabulary,
   playedIds = [],
@@ -380,7 +465,7 @@ export async function assembleCandidates({
   let poolSize = null;
 
   for (let page = 1; page <= maxPages; page++) {
-    const query = buildPoolQuery({ categorySlug, platformIds, tagSlugs, page });
+    const query = buildPoolQuery({ categorySlug, platformIds, specific, tagSlugs, page });
     const data = await request("/games", query);
     pagesFetched++;
 
@@ -413,6 +498,9 @@ export async function assembleCandidates({
     query: {
       categorySlug,
       platformIds: [...platformIds],
+      // Which parameter was used. A shortlist that looks wrong later cannot be
+      // judged without knowing whether it was filtered by family or by machine.
+      platformsAreSpecific: specific,
       tagSlugs: [...tagSlugs],
       // How many candidates carry every requested tag. The catalogue's tag
       // filter is OR, so this is the difference between "here are four difficult

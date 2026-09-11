@@ -5,11 +5,14 @@
  * function returns and nothing more — every gate runs on the server, because a
  * check that runs in the browser is a check anyone can skip.
  */
-export async function requestShortlist({ category, platforms, tags }) {
+export async function requestShortlist({ category, platforms, machines, tags }) {
   const res = await fetch("/api/shortlist", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ category, platforms, tags }),
+    // `platforms` are families, `machines` are specific consoles. The server
+    // decides which catalogue parameter to use; the browser only reports what
+    // was ticked.
+    body: JSON.stringify({ category, platforms, machines, tags }),
   });
 
   // Read as text first. A crashed function returns an HTML or plain-text error

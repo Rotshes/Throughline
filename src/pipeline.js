@@ -15,7 +15,7 @@
  * interface shows it.
  */
 
-import { assembleCandidates } from "./catalogue.js";
+import { assembleCandidates, fetchDescription } from "./catalogue.js";
 import { shortlist } from "./shortlist.js";
 import { createBudget } from "./budget.js";
 import { takeCalls } from "./callLog.js";
@@ -56,7 +56,8 @@ async function record(row) {
  */
 export async function runRequest(request) {
   const {
-    categorySlug, platformIds, platformSlugs, tagSlugs = [], playedIds = [],
+    categorySlug, platformIds, platformSlugs, machineSlugs = [],
+    specific = false, tagSlugs = [], playedIds = [],
   } = request;
 
   const budget = createBudget(config.maxCallsPerRequest);
@@ -68,7 +69,7 @@ export async function runRequest(request) {
   let assembled;
   try {
     assembled = await assembleCandidates({
-      categorySlug, platformIds, tagSlugs,
+      categorySlug, platformIds, specific, tagSlugs,
       vocabulary: tagVocabulary(), playedIds,
     });
   } catch (e) {
@@ -92,7 +93,10 @@ export async function runRequest(request) {
 
   const base = {
     category: categorySlug,
-    platforms: platformSlugs,
+    // The machines when specific ones were named, the families otherwise. A
+    // shortlist judged later needs to know which was asked for; "playstation"
+    // and "playstation5" are very different requests.
+    platforms: specific ? machineSlugs : platformSlugs,
     tags: tagSlugs,
     candidate_ids: candidates.map(c => c.id),
     candidate_count: candidates.length,
@@ -115,7 +119,7 @@ export async function runRequest(request) {
   // --- step 3 ----------------------------------------------------------------
   const result = await shortlist({
     candidates,
-    request: { categorySlug, platformSlugs, tagSlugs },
+    request: { categorySlug, platformSlugs, machineSlugs, specific, tagSlugs },
     budget,
   });
 
@@ -134,10 +138,23 @@ export async function runRequest(request) {
     };
   }
 
+  // The catalogue's own description of each chosen game. One request per pick,
+  // made only after the shortlist has passed every gate — never for the whole
+  // candidate set, which would be twenty-four requests of a monthly twenty
+  // thousand for twenty-one descriptions nobody reads.
+  //
+  // In parallel, and each one already swallows its own failure. A shortlist that
+  // has passed nine gates must not be lost because a description did not load;
+  // the card simply has no synopsis, and `synopsesMissing` says how many.
+  const descriptions = await Promise.all(result.picks.map(p => fetchDescription(p.id)));
+  const picksWithDetail = result.picks.map((p, i) => ({ ...p, synopsis: descriptions[i] }));
+
   // Stored as shown. Criterion 15 ties a click to the text that persuaded, so
   // the case cannot be regenerated later and treated as the same thing.
-  const picks = result.picks.map(p => ({
-    id: p.id, title: p.title, angle: p.angle, angleLabel: p.angleLabel, case: p.case,
+  // The synopsis is the catalogue's and can be refetched, so it is not stored.
+  const picks = picksWithDetail.map(p => ({
+    id: p.id, title: p.title, angle: p.angle, angleLabel: p.angleLabel,
+    angleReason: p.angleReason, case: p.case,
   }));
 
   const recording = await record({ ...base, outcome: "shortlisted", picks });
@@ -145,7 +162,8 @@ export async function runRequest(request) {
   return {
     ok: true,
     requestId: recording.id ?? null,
-    picks: result.picks,
+    picks: picksWithDetail,
+    synopsesMissing: descriptions.filter(d => d === null).length,
     query,
     budget: { used: budget.used, max: budget.max },
     usage: result.usage,

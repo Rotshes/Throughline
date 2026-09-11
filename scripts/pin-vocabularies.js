@@ -18,6 +18,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fetchGenres, fetchParentPlatforms } from "../src/catalogue.js";
+import { config } from "../src/config.js";
 
 const outDir = path.resolve(process.cwd(), "data");
 fs.mkdirSync(outDir, { recursive: true });
@@ -42,8 +43,12 @@ const categoriesFile = {
 
 const platformsFile = {
   $comment:
-    "Parent platforms, not platforms. 'PlayStation' rather than 'PlayStation 5' " +
-    "is the granularity a person has in mind when they say what they can play on.",
+    "The platform tree. `platforms` is the families — PlayStation, Nintendo — " +
+    "which is how people describe what they own. Each carries the machines under " +
+    "it, in the catalogue's own order which runs roughly newest first, for " +
+    "someone who owns a PS5 specifically and cannot play a PS3 game. The two are " +
+    "filtered with different catalogue parameters and are never mixed in one " +
+    "request; see buildPoolQuery.",
   source: "rawg",
   pinnedOn: stamp,
   platforms,
@@ -62,9 +67,60 @@ console.log(`data/categories.json  ${genres.length} categories`);
 for (const g of categoriesFile.categories) {
   console.log(`  ${g.slug.padEnd(20)} ${String(g.count ?? "?").padStart(7)} games`);
 }
-console.log(`\ndata/platforms.json   ${platforms.length} platforms`);
+const machineCount = platforms.reduce((n, p) => n + p.platforms.length, 0);
+console.log(`\ndata/platforms.json   ${platforms.length} families, ${machineCount} machines`);
 for (const p of platforms) {
   console.log(`  ${String(p.id).padStart(3)}  ${p.slug.padEnd(16)} ${p.name}`);
+  if (p.platforms.length) {
+    console.log(`       ${p.platforms.map(c => `${c.name} (${c.id})`).join(", ")}`);
+  }
+}
+
+// --- does `platforms=a,b` narrow or widen? -----------------------------------
+// Tags turned out to combine with OR, which is the opposite of what a reader
+// expects, and it was only found by measuring. No second parameter gets trusted
+// on the same assumption. An ignored or misread parameter returns a plausible
+// list and looks exactly like success.
+
+console.log("\n=== how several machines combine ===\n");
+
+async function countFor(params) {
+  const q = new URLSearchParams({ ...params, page_size: "1", exclude_additions: "true" });
+  q.set("key", config.rawgKey);
+  const res = await fetch(`https://api.rawg.io/api/games?${q}`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) return null;
+  return (await res.json()).count ?? null;
+}
+
+const playstation = platforms.find(p => p.slug === "playstation");
+if (playstation && playstation.platforms.length >= 2) {
+  const [a, b] = playstation.platforms;
+  const one = await countFor({ platforms: String(a.id) });
+  const two = await countFor({ platforms: `${a.id},${b.id}` });
+  const family = await countFor({ parent_platforms: String(playstation.id) });
+
+  console.log(`  platforms=${a.id} (${a.name})          ${one ?? "failed"}`);
+  console.log(`  platforms=${a.id},${b.id} (+ ${b.name})   ${two ?? "failed"}`);
+  console.log(`  parent_platforms=${playstation.id} (all PlayStation)  ${family ?? "failed"}`);
+
+  if (one != null && two != null) {
+    console.log(
+      two > one
+        ? "\n  Two machines gave MORE than one. They combine with OR, as tags do."
+        : two < one
+          ? "\n  Two machines gave FEWER than one. They combine with AND — which for " +
+            "\n  platforms means 'released on both', and would be wrong to offer as a filter."
+          : "\n  IDENTICAL. The parameter is being ignored; do not build on it."
+    );
+  }
+  if (family != null && two != null && family < two) {
+    console.log(
+      "\n  WARNING: the family holds fewer than two of its own machines. The two\n" +
+      "  parameters do not mean what this code assumes. Stop and read the raw responses."
+    );
+  }
 }
 
 console.log(

@@ -60,18 +60,31 @@ if (!categorySlug || !platformArg) {
 // A typo should fail here with a readable message, not reach the catalogue and
 // come back as an empty pool that looks like a thin filter.
 
-let platformIds;
+// A platform argument may name families ("playstation") or machines
+// ("playstation5"). Naming any machine puts the whole request into machine mode,
+// because the two are different catalogue parameters and are never sent
+// together — see buildPoolQuery.
+let platformIds, specific = false;
 try {
   const pinned = JSON.parse(readData("data/platforms.json"));
-  const bySlug = new Map(pinned.platforms.map(p => [p.slug, p.id]));
+  const familyId = new Map(pinned.platforms.map(p => [p.slug, p.id]));
+  const familyChildren = new Map(pinned.platforms.map(p => [p.slug, (p.platforms || []).map(c => c.id)]));
+  const machineId = new Map(pinned.platforms.flatMap(p => (p.platforms || []).map(c => [c.slug, c.id])));
+
   const wanted = platformArg.split(",").map(s => s.trim());
-  const missing = wanted.filter(s => !bySlug.has(s));
+  const missing = wanted.filter(s => !familyId.has(s) && !machineId.has(s));
   if (missing.length) {
-    console.error(`Unknown platform slug: ${missing.join(", ")}`);
-    console.error(`Known: ${[...bySlug.keys()].join(", ")}`);
+    console.error(`Unknown platform: ${missing.join(", ")}`);
+    console.error(`Families: ${[...familyId.keys()].join(", ")}`);
+    console.error(`Run scripts/pin-vocabularies.js if the machine names are missing.`);
     process.exit(1);
   }
-  platformIds = wanted.map(s => bySlug.get(s));
+
+  specific = wanted.some(s => machineId.has(s) && !familyId.has(s));
+  platformIds = specific
+    ? [...new Set(wanted.flatMap(s =>
+        machineId.has(s) ? [machineId.get(s)] : (familyChildren.get(s) ?? [])))]
+    : wanted.map(s => familyId.get(s));
 } catch (e) {
   console.error(`Could not read data/platforms.json — run scripts/pin-vocabularies.js first.\n${e.message}`);
   process.exit(1);
@@ -110,6 +123,7 @@ try {
   result = await assembleCandidates({
     categorySlug,
     platformIds,
+    specific,
     tagSlugs,
     vocabulary,
     playedIds,
@@ -145,6 +159,7 @@ for (const c of candidates) {
     `${c.metacritic ?? "--"} metacritic`
   );
   console.log(`         platforms: ${c.platforms.join(", ")}`);
+  if (specific) console.log(`         machines: ${c.machines.join(", ")}`);
   console.log(`         categories: ${c.categories.join(", ")}`);
   if (tagSlugs.length) {
     console.log(`         matched: ${c.matchedTags.length}/${tagSlugs.length}${c.matchedTags.length ? " — " + c.matchedTags.join(", ") : ""}`);
@@ -157,8 +172,10 @@ for (const c of candidates) {
 // --- what the filter actually did --------------------------------------------
 // Run here rather than trusted. Criteria 3 and 4, and the weaker tag version.
 
-const wantedPlatforms = platformArg.split(",");
-const offPlatform = candidates.filter(c => !c.platforms.some(p => wantedPlatforms.includes(p)));
+const wantedPlatforms = platformArg.split(",").map(s => s.trim());
+const offPlatform = candidates.filter(c =>
+  !(specific ? c.machines : c.platforms).some(p => wantedPlatforms.includes(p))
+);
 const offCategory = candidates.filter(c => !c.categories.includes(categorySlug));
 const offTag = tagSlugs.length
   ? candidates.filter(c => !tagSlugs.some(t => c.tags.includes(t)))

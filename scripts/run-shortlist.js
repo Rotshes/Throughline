@@ -125,6 +125,9 @@ if (!result.ok) {
 
 for (const p of result.picks) {
   console.log(`── ${p.angleLabel.toUpperCase()} ─────────────────────────`);
+  // Written by code from the catalogue record. Null for beautiful-one, which
+  // has no fact behind it.
+  if (p.angleReason) console.log(`${p.angleReason}`);
   console.log(`${p.title}  (${p.released?.slice(0, 4) ?? "?"})`);
   console.log(`${p.case}\n`);
   console.log(`   id ${p.id} · ${p.platforms.join(", ")} · ${p.metacritic ?? "--"} metacritic · ${p.ratingCount} ratings`);

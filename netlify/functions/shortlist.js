@@ -29,7 +29,15 @@ function vocabularies() {
     const tags = JSON.parse(readData("data/tags.json"));
     vocab = {
       categories: new Set(categories.categories.map(c => c.slug)),
-      platformIdBySlug: new Map(platforms.platforms.map(p => [p.slug, p.id])),
+      // Families: "playstation". Machines: "playstation5". Different catalogue
+      // parameters, never mixed in one request — see buildPoolQuery.
+      familyIdBySlug: new Map(platforms.platforms.map(p => [p.slug, p.id])),
+      familyChildren: new Map(
+        platforms.platforms.map(p => [p.slug, (p.platforms || []).map(c => c.id)])
+      ),
+      machineIdBySlug: new Map(
+        platforms.platforms.flatMap(p => (p.platforms || []).map(c => [c.slug, c.id]))
+      ),
       tags: new Set(tags.facets.flatMap(f => f.tags.map(t => t.slug))),
     };
   }
@@ -61,15 +69,39 @@ export async function handler(event) {
     return json(400, { error: `"${category}" is not a category this app offers.` });
   }
 
-  const platformSlugs = Array.isArray(body.platforms)
-    ? [...new Set(body.platforms.map(p => String(p).trim()))]
+  const familySlugs = Array.isArray(body.platforms)
+    ? [...new Set(body.platforms.map(p => String(p).trim()).filter(Boolean))]
     : [];
-  if (platformSlugs.length === 0) {
+  const machineSlugs = Array.isArray(body.machines)
+    ? [...new Set(body.machines.map(p => String(p).trim()).filter(Boolean))]
+    : [];
+
+  if (familySlugs.length === 0 && machineSlugs.length === 0) {
     return json(400, { error: "Choose at least one platform." });
   }
-  const unknownPlatform = platformSlugs.filter(p => !v.platformIdBySlug.has(p));
-  if (unknownPlatform.length) {
-    return json(400, { error: `Unknown platform: ${unknownPlatform.join(", ")}` });
+  const unknownFamily = familySlugs.filter(p => !v.familyIdBySlug.has(p));
+  if (unknownFamily.length) {
+    return json(400, { error: `Unknown platform: ${unknownFamily.join(", ")}` });
+  }
+  const unknownMachine = machineSlugs.filter(p => !v.machineIdBySlug.has(p));
+  if (unknownMachine.length) {
+    return json(400, { error: `Unknown console: ${unknownMachine.join(", ")}` });
+  }
+
+  // One parameter per request. The moment a specific machine is named, every
+  // selection resolves to machine ids — a whole family becomes its children —
+  // rather than sending both parameters and depending on how the catalogue
+  // combines them, which this project has not measured and will not assume.
+  const specific = machineSlugs.length > 0;
+  const platformIds = specific
+    ? [...new Set([
+        ...machineSlugs.map(s => v.machineIdBySlug.get(s)),
+        ...familySlugs.flatMap(s => v.familyChildren.get(s) ?? []),
+      ])]
+    : familySlugs.map(s => v.familyIdBySlug.get(s));
+
+  if (platformIds.length === 0) {
+    return json(400, { error: "Those platforms have no machines the catalogue knows about." });
   }
 
   const tagSlugs = Array.isArray(body.tags)
@@ -91,8 +123,10 @@ export async function handler(event) {
   try {
     result = await runRequest({
       categorySlug: category,
-      platformSlugs,
-      platformIds: platformSlugs.map(p => v.platformIdBySlug.get(p)),
+      platformSlugs: familySlugs,
+      machineSlugs,
+      platformIds,
+      specific,
       tagSlugs,
     });
   } catch (e) {
@@ -114,9 +148,15 @@ export async function handler(event) {
           released: p.released,
           angle: p.angle,
           angleLabel: p.angleLabel,
+          // Written by code from catalogue data. May be null — `beautiful-one`
+          // has no fact behind it and gets no line rather than an invented one.
+          angleReason: p.angleReason ?? null,
           case: p.case,
+          // The catalogue's own words, kept separate from the model's argument
+          // above. May be null when the detail request failed.
+          synopsis: p.synopsis ?? null,
           image: p.image,
-          screenshots: p.screenshots?.slice(0, 3) ?? [],
+          screenshots: p.screenshots?.slice(0, 5) ?? [],
           platforms: p.platforms,
           metacritic: p.metacritic,
           tags: p.tags,
@@ -128,6 +168,7 @@ export async function handler(event) {
       fullMatches: result.query?.fullMatches ?? null,
       callsUsed: result.budget?.used ?? null,
       callCap: result.budget?.max ?? null,
+      synopsesMissing: result.synopsesMissing ?? null,
       latencyMs: result.usage?.latency_ms ?? null,
       prompt: result.prompt ? `${result.prompt.file} v${result.prompt.version}` : null,
       // Surfaced rather than swallowed: if recording failed, criterion 10 did

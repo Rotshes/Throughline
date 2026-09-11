@@ -166,6 +166,17 @@ where the code they refer to is gone — the lesson outlived the design.
   against a field list that could not be read anywhere, so it shipped with an
   inspection script that printed the real response. It happened to be right. The
   script is why that is known rather than assumed. (Turn 005)
+* **An assumption about someone else's ordering is still an assumption.** The
+  platform list was reversed on the belief that the catalogue sorted oldest
+  first. It sorts newest first, so the reverse buried the Nintendo Switch
+  thirteenth of thirteen. No test could fail: the code did exactly what it was
+  told. Only reading the output caught it. (Turn 009)
+* **Check the artifact before suspecting the source.** A pinned file regenerated
+  after a fix came out byte-identical to the version before it. The source was
+  correct and the file on disk was old. Two commands settled it — grep the
+  source, read the artifact — against an afternoon of looking for a bug that was
+  not there. This is the turn-001 stale-result rule wearing different clothes.
+  (Turn 009)
 
 ## Conventions
 

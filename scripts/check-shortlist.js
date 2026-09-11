@@ -16,9 +16,11 @@
 import {
   checkShortlist,
   angleFits,
+  explainAngle,
   formatCandidate,
   describeRequest,
 } from "../src/shortlist.js";
+import { trimDescription } from "../src/catalogue.js";
 import { parseJsonStrict } from "../src/validate.js";
 
 let passed = 0;
@@ -57,7 +59,8 @@ const ANGLES = [
 
 function candidate(over = {}) {
   return {
-    id: 1, title: "Fixture", platforms: ["pc"], categories: ["action"],
+    id: 1, title: "Fixture", platforms: ["pc"], machines: ["pc"],
+    categories: ["action"],
     tags: ["difficult"], playtime: 8, metacritic: 90, ratingCount: 1000,
     released: "2020-01-01", ...over,
   };
@@ -125,6 +128,51 @@ check("the same game twice is rejected", () => {
 });
 
 // --- criteria 3, 4, 4a --------------------------------------------------------
+
+// --- criterion 3 at both granularities ----------------------------------------
+// The point of offering specific consoles is that "on PlayStation" is no use to
+// someone who owns only a PS5. If the check stayed at family level the feature
+// would be decorative — the filter would narrow and the gate would not.
+
+const SPECIFIC = {
+  categorySlug: "action",
+  platformSlugs: ["playstation"],
+  machineSlugs: ["playstation5"],
+  specific: true,
+  tagSlugs: [],
+};
+
+check("a specific request checks the machine, not the family", () => {
+  const ps4Only = candidate({ platforms: ["playstation"], machines: ["playstation4"] });
+  const r = checkShortlist(
+    [{ id: 1, angle: "safe-pick", case: "x".repeat(50) }],
+    [ps4Only], SPECIFIC, ANGLES
+  );
+  assert(!r.ok, "a PS4 game must not satisfy a request for PS5");
+  has(r.problems, "playstation4");
+});
+
+check("a specific request passes when the machine matches", () => {
+  const ps5 = candidate({ platforms: ["playstation"], machines: ["playstation5", "playstation4"] });
+  const r = checkShortlist(
+    [{ id: 1, angle: "safe-pick", case: "x".repeat(50) }],
+    [ps5], SPECIFIC, ANGLES
+  );
+  assert(r.ok, r.problems.join(" | "));
+});
+
+check("a family request still checks the family", () => {
+  // A PS3-only game satisfies "PlayStation". Narrowing the family check to
+  // machines would silently break every request that named no console.
+  const ps3 = candidate({ platforms: ["playstation"], machines: ["playstation3"] });
+  const r = checkShortlist(
+    [{ id: 1, angle: "safe-pick", case: "x".repeat(50) }],
+    [ps3],
+    { categorySlug: "action", platformSlugs: ["playstation"], specific: false, tagSlugs: [] },
+    ANGLES
+  );
+  assert(r.ok, r.problems.join(" | "));
+});
 
 check("a game not on a selected platform is rejected", () => {
   const cands = [candidate({ id: 1, platforms: ["playstation"] }), CANDIDATES[1], CANDIDATES[2]];
@@ -282,6 +330,117 @@ check("describeRequest reads as a request", () => {
   );
   assert(describeRequest({ categorySlug: "indie", platformSlugs: ["pc", "nintendo"] })
     === "indie games on pc or nintendo");
+});
+
+// --- explainAngle -------------------------------------------------------------
+// Written from the catalogue, never asked of the model. These checks matter
+// because a sentence that reads like a fact and is not one is worse than no
+// sentence — it borrows the credibility of the checked data for a guess.
+
+const SIBLINGS = [
+  candidate({ id: 1, title: "Popular", ratingCount: 5000 }),
+  candidate({ id: 2, title: "Middling", ratingCount: 900 }),
+  candidate({ id: 3, title: "Obscure", ratingCount: 200 }),
+];
+
+check("the deep cut names what it is a deep cut against", () => {
+  const r = explainAngle({ angle: "deep-cut" }, SIBLINGS[2], SIBLINGS, REQUEST);
+  assert(r.includes("200"), r);
+  assert(r.includes("5,000"), `the comparison needs the other number: ${r}`);
+  assert(r.includes("Popular"), `and which game it belongs to: ${r}`);
+});
+
+check("the deep cut does not compare a game against itself", () => {
+  // If the model gives deep-cut to the most-rated of the three, the sentence
+  // must not read "5,000 ratings, against 5,000 for Popular".
+  const r = explainAngle({ angle: "deep-cut" }, SIBLINGS[0], SIBLINGS, REQUEST);
+  assert(!r.includes("against"), r);
+  assert(r.includes("5,000"), r);
+});
+
+check("the safe pick says so when it matched every tag", () => {
+  const c = candidate({ tags: ["roguelike", "difficult"] });
+  const r = explainAngle({ angle: "safe-pick" }, c, [c], { tagSlugs: ["roguelike", "difficult"] });
+  assert(r.includes("everything you asked for"), r);
+  assert(r.includes("roguelike and difficult"), r);
+});
+
+check("the safe pick falls back to a score when no tags were asked for", () => {
+  const c = candidate({ metacritic: 91 });
+  const r = explainAngle({ angle: "safe-pick" }, c, [c], { tagSlugs: [] });
+  assert(r.includes("91"), r);
+});
+
+check("the safe pick falls back again when there is no score either", () => {
+  const c = candidate({ metacritic: null, ratingCount: 1200 });
+  const r = explainAngle({ angle: "safe-pick" }, c, [c], { tagSlugs: [] });
+  assert(r.includes("1,200"), r);
+});
+
+check("the hard one names the tag it is resting on", () => {
+  const r = explainAngle({ angle: "hard-one" }, candidate({ tags: ["difficult", "souls-like"] }), [], REQUEST);
+  assert(r.includes("difficult and souls-like"), r);
+});
+
+check("the short one quotes the recorded playtime", () => {
+  const r = explainAngle({ angle: "short-one" }, candidate({ playtime: 6 }), [], REQUEST);
+  assert(r.includes("6 hours"), r);
+});
+
+check("an angle with no fact behind it gets no line rather than an invented one", () => {
+  // beautiful-one is a judgement. A fabricated justification would read exactly
+  // like the five that are true, which is the whole reason these come from data.
+  assert(explainAngle({ angle: "beautiful-one" }, candidate(), [], REQUEST) === null);
+});
+
+check("a constrained angle with the fact missing also returns null", () => {
+  assert(explainAngle({ angle: "short-one" }, candidate({ playtime: 0 }), [], REQUEST) === null);
+  assert(explainAngle({ angle: "hard-one" }, candidate({ tags: ["cozy"] }), [], REQUEST) === null);
+  assert(explainAngle({ angle: "with-someone" }, candidate({ tags: ["cozy"] }), [], REQUEST) === null);
+});
+
+check("an angle added later without a case here returns null, not undefined", () => {
+  assert(explainAngle({ angle: "the-new-one" }, candidate(), [], REQUEST) === null);
+});
+
+// --- trimDescription ----------------------------------------------------------
+
+check("trimDescription leaves a short description alone", () => {
+  assert(trimDescription("A short one.") === "A short one.");
+});
+
+check("trimDescription collapses whitespace", () => {
+  assert(trimDescription("two\n\n  lines") === "two lines");
+});
+
+check("trimDescription cuts at a sentence boundary", () => {
+  const sentence = "A first sentence long enough that ending the synopsis here leaves the reader something they can actually use, rather than a fragment.";
+  const r = trimDescription(sentence + " " + "x".repeat(500), 420);
+  assert(r === sentence, `got "${r}"`);
+});
+
+check("trimDescription would rather mark a cut than return a stub", () => {
+  // A sentence stop at character 3 must not make "Hi." the whole synopsis. The
+  // floor is absolute, so this holds whatever the limit is.
+  const r = trimDescription("Hi. " + "x".repeat(500), 300);
+  assert(r.length > 200, `got ${r.length} chars`);
+  assert(r.endsWith("…"), r);
+});
+
+check("trimDescription's floor does not scale with the limit", () => {
+  // A 150-character first sentence is worth keeping whether the budget is 300
+  // or 900. An earlier version used half the limit and dropped it at 900.
+  const sentence = "x".repeat(148) + ".";
+  const text = sentence + " " + "y".repeat(2000);
+  assert(trimDescription(text, 300) === sentence, "at 300");
+  assert(trimDescription(text, 900) === sentence, "at 900");
+});
+
+check("trimDescription handles nothing gracefully", () => {
+  assert(trimDescription(null) === null);
+  assert(trimDescription("") === null);
+  assert(trimDescription("   ") === null);
+  assert(trimDescription(42) === null);
 });
 
 // --- parsing ------------------------------------------------------------------

@@ -72,6 +72,12 @@ const rawFull = {
     { platform: { id: 1, slug: "pc", name: "PC" } },
     { platform: { id: 2, slug: "playstation", name: "PlayStation" } },
   ],
+  // The machines under those families. A game is on "PlayStation" and on a
+  // "PlayStation 5"; the two lists are filtered by different parameters.
+  platforms: [
+    { platform: { id: 4, slug: "pc", name: "PC" } },
+    { platform: { id: 187, slug: "playstation5", name: "PlayStation 5" } },
+  ],
   genres: [
     { id: 4, slug: "action", name: "Action" },
     { id: 3, slug: "adventure", name: "Adventure" },
@@ -126,6 +132,21 @@ check("buildPoolQuery joins platform ids with commas", () => {
 check("buildPoolQuery passes the category through unchanged", () => {
   const q = buildPoolQuery({ categorySlug: "role-playing-games-rpg", platformIds: [1] });
   assert(q.genres === "role-playing-games-rpg", `got ${q.genres}`);
+});
+
+check("buildPoolQuery sends family ids by default", () => {
+  const q = buildPoolQuery({ categorySlug: "action", platformIds: [2] });
+  assert(q.parent_platforms === "2", `got ${q.parent_platforms}`);
+  assert(!("platforms" in q), "the machine parameter must be absent");
+});
+
+check("buildPoolQuery sends machine ids when asked, and only those", () => {
+  const q = buildPoolQuery({ categorySlug: "action", platformIds: [187, 18], specific: true });
+  assert(q.platforms === "187,18", `got ${q.platforms}`);
+  // Sending both would depend on how the catalogue combines them, which this
+  // project has not measured. Tags turned out to be OR when a reader expects
+  // AND; no second interaction gets assumed.
+  assert(!("parent_platforms" in q), "never both parameters in one request");
 });
 
 check("buildPoolQuery excludes DLC", () => {
@@ -201,6 +222,18 @@ check("toCandidate maps every field it is asked for", () => {
 check("toCandidate flattens parent platforms to slugs", () => {
   const c = toCandidate(rawFull);
   assert(c.platforms.join(",") === "pc,playstation", `got ${c.platforms}`);
+});
+
+check("toCandidate keeps the machines separately from the families", () => {
+  const c = toCandidate(rawFull);
+  assert(c.machines.join(",") === "pc,playstation5", `got ${c.machines}`);
+  assert(c.platforms.length !== c.machines.length || c.platforms[1] !== c.machines[1],
+    "families and machines must not be the same list");
+});
+
+check("toCandidate defaults machines to empty rather than undefined", () => {
+  assert(Array.isArray(toCandidate(rawBare).machines));
+  assert(toCandidate(rawBare).machines.length === 0);
 });
 
 check("toCandidate flattens genres to slugs", () => {

@@ -111,6 +111,52 @@ select {
   color: var(--paper);
 }
 
+.families { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.family { display: flex; flex-direction: column; }
+
+/* An expanded family takes the whole row, so a dozen PlayStations do not have
+   to wrap inside a chip's width. */
+.family.open { flex: 1 0 100%; }
+.family-row { display: flex; align-items: stretch; gap: 2px; }
+
+.chip .count {
+  display: inline-block;
+  min-width: 17px;
+  margin-left: 6px;
+  padding: 0 4px;
+  text-align: center;
+  font-size: 11px;
+  line-height: 17px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--paper);
+}
+
+.chip.on .count { background: var(--paper); color: var(--accent); }
+
+.expand {
+  padding: 0 8px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--quiet);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.expand:hover { border-color: var(--accent); color: var(--accent); }
+
+.chips.machines {
+  width: 100%;
+  margin: 8px 0 4px;
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+}
+
+.chip.small { padding: 5px 10px; font-size: 13px; }
+
 .facets { display: flex; flex-direction: column; gap: 6px; }
 
 .facet-head {
@@ -203,10 +249,16 @@ select {
   color: var(--accent);
 }
 
+.angle-reason {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--quiet);
+}
+
 .pick h2 { margin: 0 0 14px; font-size: 21px; letter-spacing: -0.01em; }
 .pick .year { color: var(--quiet); font-weight: 400; font-size: 15px; }
 
-.pick img {
+.gallery img {
   display: block;
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -215,7 +267,52 @@ select {
   background: var(--line);
 }
 
+.strip {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  overflow-x: auto;
+}
+
+.thumb {
+  flex: 0 0 auto;
+  width: 74px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  opacity: 0.55;
+}
+
+.thumb:hover { opacity: 0.85; }
+.thumb.on { border-color: var(--accent); opacity: 1; }
+.thumb img { border-radius: 4px; }
+
 .case { margin: 16px 0 12px; }
+
+/* The catalogue's words, marked as such. The block above is a language model's
+   argument and nothing checks it; this one can be checked. Running them
+   together as one voice would hide the only distinction that makes showing the
+   second one worthwhile. */
+.synopsis {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  background: var(--paper);
+  border-radius: 8px;
+}
+
+.synopsis p { margin: 0; font-size: 14px; color: var(--quiet); }
+
+.synopsis .source {
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--quiet);
+  opacity: 0.75;
+}
 
 .facts { margin: 0 0 16px; font-size: 13px; color: var(--quiet); }
 

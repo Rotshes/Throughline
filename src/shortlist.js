@@ -80,6 +80,76 @@ export function angleFits(angleDef, candidate) {
 }
 
 /**
+ * Why this game got this angle, written from the catalogue rather than asked of
+ * the model.
+ *
+ * Five of the six angles rest on something already on the candidate record: how
+ * many people rated it, what the catalogue tags it, how long it takes, how much
+ * of the request it matched. Asking the model to justify a label it has just
+ * applied would spend tokens to produce a sentence nothing can check, and it is
+ * the model reviewing its own choice — which agents do badly, because they
+ * defend themselves.
+ *
+ * `beautiful-one` returns null. Nothing on a catalogue record says a game is
+ * beautiful, and inventing a number to stand in for that would be worse than
+ * leaving the line off.
+ *
+ * Pure. `siblings` is the rest of the shortlist, needed only so the deep cut can
+ * say what it is a deep cut relative to.
+ */
+export function explainAngle(pick, candidate, siblings, request) {
+  const n = x => Number(x ?? 0).toLocaleString("en-GB");
+
+  switch (pick.angle) {
+    case "safe-pick": {
+      const wanted = request?.tagSlugs ?? [];
+      const matched = wanted.filter(t => (candidate.tags || []).includes(t));
+      if (wanted.length && matched.length === wanted.length) {
+        return `Matches everything you asked for — ${matched.join(" and ")}.`;
+      }
+      if (candidate.metacritic) {
+        return `The best reviewed of the three, at ${candidate.metacritic} on Metacritic.`;
+      }
+      return `The most rated of the three, by ${n(candidate.ratingCount)} people.`;
+    }
+
+    case "deep-cut": {
+      const best = siblings.reduce(
+        (a, b) => ((b.ratingCount ?? 0) > (a.ratingCount ?? 0) ? b : a),
+        siblings[0] ?? candidate
+      );
+      if (best && best.id !== candidate.id && best.ratingCount > candidate.ratingCount) {
+        return `${n(candidate.ratingCount)} ratings, against ${n(best.ratingCount)} for ${best.title}.`;
+      }
+      return `Only ${n(candidate.ratingCount)} people have rated it.`;
+    }
+
+    case "hard-one": {
+      const marks = (candidate.tags || []).filter(t => ["difficult", "souls-like"].includes(t));
+      return marks.length
+        ? `The catalogue tags it ${marks.join(" and ")}.`
+        : null;
+    }
+
+    case "short-one":
+      return candidate.playtime
+        ? `About ${candidate.playtime} hours, going by the catalogue.`
+        : null;
+
+    case "with-someone": {
+      const how = (candidate.tags || []).filter(t =>
+        ["co-op", "local-co-op", "online-co-op", "multiplayer", "split-screen", "local-multiplayer", "pvp"].includes(t)
+      );
+      return how.length ? `Tagged ${how.join(", ")}.` : null;
+    }
+
+    // beautiful-one, and anything added later without a fact behind it.
+    default:
+      return null;
+  }
+}
+
+/**
  * Every gate that needs the candidate set or the request. Pure — no network, no
  * model, no key — so the whole of the checking can be exercised offline.
  *
@@ -117,10 +187,17 @@ export function checkShortlist(picks, candidates, request, angleDefs) {
     seenIds.add(pick.id);
 
     // Criterion 3. Against catalogue data, never against a claim in the case.
-    if (request.platformSlugs?.length) {
-      const onPlatform = (candidate.platforms || []).some(p => request.platformSlugs.includes(p));
+    //
+    // Checked at whichever granularity was asked for. Someone who selected a
+    // PS5 is not served by a game that is "on PlayStation" — that is what the
+    // whole specific-machine option exists to fix, so the check has to follow
+    // it or the feature is decorative.
+    const wantedPlatforms = request.specific ? request.machineSlugs : request.platformSlugs;
+    if (wantedPlatforms?.length) {
+      const held = request.specific ? candidate.machines : candidate.platforms;
+      const onPlatform = (held || []).some(p => wantedPlatforms.includes(p));
       if (!onPlatform) {
-        problems.push(`"${candidate.title}" is on [${(candidate.platforms || []).join(", ")}], none of the selected [${request.platformSlugs.join(", ")}].`);
+        problems.push(`"${candidate.title}" is on [${(held || []).join(", ")}], none of the selected [${wantedPlatforms.join(", ")}].`);
       }
     }
 
@@ -188,9 +265,12 @@ export function formatCandidate(c, tagSlugs = []) {
 }
 
 /** A sentence describing the request, for the prompt. */
-export function describeRequest({ categorySlug, platformSlugs = [], tagSlugs = [] }) {
+export function describeRequest({
+  categorySlug, platformSlugs = [], machineSlugs = [], specific = false, tagSlugs = [],
+}) {
+  const where = specific ? machineSlugs : platformSlugs;
   const parts = [`${categorySlug} games`];
-  if (platformSlugs.length) parts.push(`on ${platformSlugs.join(" or ")}`);
+  if (where.length) parts.push(`on ${where.join(" or ")}`);
   if (tagSlugs.length) parts.push(`that are ${tagSlugs.join(" and ")}`);
   return parts.join(" ");
 }
@@ -300,16 +380,22 @@ export async function shortlist({ candidates, request, budget }) {
     // platforms — comes from the catalogue.
     const byId = new Map(candidates.map(c => [c.id, c]));
     const angleById = new Map(angleDefs.map(a => [a.id, a]));
+    const chosen = parsed.value.picks.map(p => byId.get(p.id));
 
     return {
       ok: true,
       calls,
-      picks: parsed.value.picks.map(p => ({
-        ...byId.get(p.id),
-        angle: p.angle,
-        angleLabel: angleById.get(p.angle).label,
-        case: p.case,
-      })),
+      picks: parsed.value.picks.map(p => {
+        const candidate = byId.get(p.id);
+        return {
+          ...candidate,
+          angle: p.angle,
+          angleLabel: angleById.get(p.angle).label,
+          // Written by code from the catalogue, never asked of the model.
+          angleReason: explainAngle(p, candidate, chosen, request),
+          case: p.case,
+        };
+      }),
       usage: { tokens_in: result.tokens_in, tokens_out: result.tokens_out,
                cost_usd: result.cost_usd, latency_ms: result.latency_ms, attempts: attempt },
       prompt: promptFile,
