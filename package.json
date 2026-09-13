@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "check": "node scripts/check-catalogue.js && node scripts/check-platforms.js && node scripts/check-shortlist.js && node scripts/check-library.js && node scripts/check-detail.js && node scripts/check-igdb.js && node scripts/check-igdb-catalogue.js",
+    "check": "node scripts/check-catalogue.js && node scripts/check-platforms.js && node scripts/check-shortlist.js && node scripts/check-library.js && node scripts/check-detail.js && node scripts/check-igdb.js && node scripts/check-igdb-catalogue.js && node scripts/check-deals.js && node scripts/check-events.js && node scripts/check-suggested.js && node scripts/check-css.js",
     "check:catalogue": "node scripts/check-catalogue.js",
     "check:platforms": "node scripts/check-platforms.js",
     "check:shortlist": "node scripts/check-shortlist.js",
@@ -28,7 +28,17 @@
     "igdb:pin": "node scripts/pin-igdb.js",
     "igdb:verify": "node scripts/inspect-igdb-catalogue.js",
     "check:igdb-catalogue": "node scripts/check-igdb-catalogue.js",
-    "igdb:tags": "node scripts/pin-igdb-tags.js"
+    "igdb:tags": "node scripts/pin-igdb-tags.js",
+    "probe:deals": "node scripts/probe-deals.js",
+    "probe:deals2": "node scripts/probe-deals-2.js",
+    "check:deals": "node scripts/check-deals.js",
+    "probe:news": "node scripts/probe-news.js",
+    "probe:igdb-news": "node scripts/probe-igdb-news.js",
+    "probe:events": "node scripts/probe-events.js",
+    "check:events": "node scripts/check-events.js",
+    "check:suggested": "node scripts/check-suggested.js",
+    "probe:reviews": "node scripts/probe-reviews.js",
+    "check:css": "node scripts/check-css.js"
   },
   "engines": {
     "node": ">=18"
