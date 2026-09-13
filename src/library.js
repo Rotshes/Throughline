@@ -68,17 +68,29 @@ export async function listLibrary() {
  * every recommendation and does not need the titles or the images.
  */
 export async function libraryIds() {
-  if (!storeConfigured()) return { ok: true, ids: [] };
+  if (!storeConfigured()) return { ok: true, ids: [], entries: [] };
 
-  const url = `${baseUrl()}/rest/v1/library?select=game_id`;
+  // `source` travels with every id, and the exclusion is not allowed to run
+  // without it. A RAWG id and an IGDB id are both integers and mean different
+  // games; comparing them across catalogues matches nothing, and an exclusion
+  // that quietly excludes nothing is indistinguishable from an empty library.
+  // See db/migration-004-library-source.sql.
+  const url = `${baseUrl()}/rest/v1/library?select=game_id,source`;
   const res = await fetch(url, { headers: restHeaders() });
   if (!res.ok) {
     // Returned, never thrown. Failing to read the library must not fail the
     // request — it means the exclusion did not happen, which the response says.
-    return { ok: false, ids: [], reason: `HTTP ${res.status} ${await res.text()}` };
+    return { ok: false, ids: [], entries: [], reason: `HTTP ${res.status} ${await res.text()}` };
   }
   const rows = await res.json();
-  return { ok: true, ids: rows.map(r => r.game_id) };
+  return {
+    ok: true,
+    ids: rows.map(r => r.game_id),
+    // A row written before migration 004 has no source. Defaulting it to the
+    // current catalogue would hide exactly the rows this column exists to
+    // catch, so it is left absent and the catalogue module decides.
+    entries: rows.map(r => ({ game_id: r.game_id, source: r.source ?? null })),
+  };
 }
 
 /**
@@ -89,12 +101,23 @@ export async function libraryIds() {
  * the update so it keeps meaning when the game first appeared.
  */
 export async function upsertEntry(entry) {
+  // Validated before the database is consulted. A missing source is wrong
+  // whether or not Supabase is reachable, and putting the check first is what
+  // lets an offline suite cover it at all.
+  if (entry.source !== "rawg" && entry.source !== "igdb") {
+    // Refused rather than defaulted. A row whose source is a guess is worse
+    // than no row: it is a permanent claim about which catalogue an integer
+    // came from, made by code that did not know.
+    return { ok: false, reason: `A library entry needs a catalogue source, got "${entry.source}".` };
+  }
+
   if (!storeConfigured()) {
     return { ok: false, reason: "No database is configured, so nothing was saved." };
   }
 
   const row = {
     game_id: entry.gameId,
+    source: entry.source,
     status: entry.status,
     title: entry.title,
     slug: entry.slug ?? null,

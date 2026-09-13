@@ -18,7 +18,7 @@
  */
 
 import fs from "node:fs";
-import { statuses, statusIds, defaultStatus, isValidStatus } from "../src/library.js";
+import { statuses, statusIds, defaultStatus, isValidStatus, upsertEntry } from "../src/library.js";
 
 let passed = 0;
 const failures = [];
@@ -28,6 +28,25 @@ function check(name, fn) {
   catch (e) { failures.push(`${name}\n    ${e.message}`); }
 }
 function assert(cond, msg) { if (!cond) throw new Error(msg || "assertion failed"); }
+
+/**
+ * The async variant, and the reason it exists.
+ *
+ * `check` above calls fn() and increments on no throw. Handed an async function
+ * it would increment on the promise being *created*, count every case as a
+ * pass, and surface a failed assertion as an unhandled rejection after the
+ * report had already printed a clean result. That is a check that cannot fail,
+ * which is the oldest rule in CLAUDE.md.
+ */
+const pending = [];
+function checkAsync(name, fn) {
+  pending.push(
+    Promise.resolve()
+      .then(fn)
+      .then(() => { passed++; })
+      .catch(e => { failures.push(`${name}\n    ${e.message}`); })
+  );
+}
 
 // --- the vocabulary -----------------------------------------------------------
 
@@ -100,6 +119,27 @@ check("validation is case sensitive and does not trim", () => {
   assert(isValidStatus("Plan") === false);
   assert(isValidStatus(" plan") === false);
 });
+
+// --- the source column -------------------------------------------------------
+//
+// Added with migration 004. A RAWG id and an IGDB id are both integers and name
+// different games, so every stored id carries which catalogue it came from.
+// These checks are about the case where it does not.
+
+checkAsync("an entry without a source is refused rather than defaulted", async () => {
+  // Defaulting would write a permanent claim about which catalogue an integer
+  // came from, made by code that did not know. The row outlives the guess.
+  const r = await upsertEntry({ gameId: 1, status: "plan", title: "A Game" });
+  assert(r.ok === false, "an entry with no source must not be written");
+  assert(/source/i.test(r.reason), r.reason);
+});
+
+checkAsync("an invented source is refused", async () => {
+  const r = await upsertEntry({ gameId: 1, source: "igdb ", status: "plan", title: "A Game" });
+  assert(r.ok === false, "only the two known catalogues are acceptable");
+});
+
+await Promise.all(pending);
 
 // --- report -------------------------------------------------------------------
 
