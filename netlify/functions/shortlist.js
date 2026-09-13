@@ -1,5 +1,6 @@
 import { runRequest } from "../../src/pipeline.js";
 import { recordClick } from "../../src/store.js";
+import { resolvePlatforms } from "../../src/platforms.js";
 import { readData } from "../../src/paths.js";
 
 const json = (status, body) => ({
@@ -35,6 +36,9 @@ function vocabularies() {
       familyChildren: new Map(
         platforms.platforms.map(p => [p.slug, (p.platforms || []).map(c => c.id)])
       ),
+      familyChildSlugs: new Map(
+        platforms.platforms.map(p => [p.slug, (p.platforms || []).map(c => c.slug)])
+      ),
       machineIdBySlug: new Map(
         platforms.platforms.flatMap(p => (p.platforms || []).map(c => [c.slug, c.id]))
       ),
@@ -64,10 +68,16 @@ export async function handler(event) {
 
   const v = vocabularies();
 
-  const category = String(body.category ?? "").trim();
-  if (!v.categories.has(category)) {
-    return json(400, { error: `"${category}" is not a category this app offers.` });
+  // "any" and an absent category both mean no genre filter. Accepted as a real
+  // request rather than a missing one: the nineteen genres are coarse, and
+  // someone asking for something cosy on a Switch has no reason to care whether
+  // the catalogue files it under adventure or simulation.
+  const rawCategory = String(body.category ?? "").trim();
+  const anyCategory = rawCategory === "" || rawCategory === "any";
+  if (!anyCategory && !v.categories.has(rawCategory)) {
+    return json(400, { error: `"${rawCategory}" is not a category this app offers.` });
   }
+  const category = anyCategory ? null : rawCategory;
 
   const familySlugs = Array.isArray(body.platforms)
     ? [...new Set(body.platforms.map(p => String(p).trim()).filter(Boolean))]
@@ -93,11 +103,31 @@ export async function handler(event) {
   // rather than sending both parameters and depending on how the catalogue
   // combines them, which this project has not measured and will not assume.
   const specific = machineSlugs.length > 0;
+
+  // ONE list, resolved once, used for both the catalogue query and the gate
+  // that checks the answer.
+  //
+  // Turn 009 shipped these as two lists and they disagreed. Selecting PC plus a
+  // Game Boy Advance expanded PC into its machines for the query but not for the
+  // check, so the catalogue was asked for PC-or-GBA games while the gate demanded
+  // GBA alone. Every possible answer was rejected. The gate was right and the
+  // request was impossible.
+  //
+  // A filter and the check on its result are the same statement said twice. They
+  // are derived here rather than assembled separately, so they cannot drift.
+  // In src/platforms.js, pure and checked offline. It has been wrong twice while
+  // it lived here, both times in ways no test could reach.
+  const resolved = resolvePlatforms({
+    familySlugs,
+    machineSlugs,
+    childrenOf: s => v.familyChildSlugs.get(s),
+  });
+
+  const resolvedMachines = resolved.machines;
+  const selectionSlugs = resolved.selection;
+
   const platformIds = specific
-    ? [...new Set([
-        ...machineSlugs.map(s => v.machineIdBySlug.get(s)),
-        ...familySlugs.flatMap(s => v.familyChildren.get(s) ?? []),
-      ])]
+    ? resolvedMachines.map(s => v.machineIdBySlug.get(s)).filter(Number.isInteger)
     : familySlugs.map(s => v.familyIdBySlug.get(s));
 
   if (platformIds.length === 0) {
@@ -124,7 +154,11 @@ export async function handler(event) {
     result = await runRequest({
       categorySlug: category,
       platformSlugs: familySlugs,
-      machineSlugs,
+      // The full resolved set — what the query asked for, and therefore what the
+      // gate must accept.
+      machineSlugs: resolvedMachines,
+      // What the person ticked, for the record and the prompt.
+      selectionSlugs,
       platformIds,
       specific,
       tagSlugs,
@@ -141,6 +175,9 @@ export async function handler(event) {
     stage: result.ok ? null : result.stage,
     failureReason: result.ok ? null : result.failureReason,
     problems: result.problems ?? null,
+    // Present only when the pool came back thin. Says which filter emptied it,
+    // measured rather than guessed.
+    diagnosis: result.diagnosis ?? null,
     picks: result.ok
       ? result.picks.map(p => ({
           id: p.id,
@@ -152,9 +189,15 @@ export async function handler(event) {
           // has no fact behind it and gets no line rather than an invented one.
           angleReason: p.angleReason ?? null,
           case: p.case,
+          // One sentence per tag the person asked for and this game carries.
+          // The tag is the catalogue's; the sentence is the model's.
+          tagNotes: p.tagNotes ?? [],
           // The catalogue's own words, kept separate from the model's argument
           // above. May be null when the detail request failed.
           synopsis: p.synopsis ?? null,
+          // Where the button goes. Built here rather than in the browser so the
+          // catalogue's address shape stays on this side of the boundary.
+          url: p.slug ? `https://rawg.io/games/${p.slug}` : null,
           image: p.image,
           screenshots: p.screenshots?.slice(0, 5) ?? [],
           platforms: p.platforms,
@@ -169,6 +212,11 @@ export async function handler(event) {
       callsUsed: result.budget?.used ?? null,
       callCap: result.budget?.max ?? null,
       synopsesMissing: result.synopsesMissing ?? null,
+      excluded: result.excluded ?? null,
+      repeatsAvoided: result.repeatsAvoided ?? null,
+      // Surfaced rather than swallowed: if the library could not be read,
+      // criterion 8 did not hold for this request and somebody should be told.
+      libraryError: result.libraryError ?? null,
       latencyMs: result.usage?.latency_ms ?? null,
       prompt: result.prompt ? `${result.prompt.file} v${result.prompt.version}` : null,
       // Surfaced rather than swallowed: if recording failed, criterion 10 did

@@ -29,6 +29,27 @@
             "type": "string",
             "minLength": 40,
             "$comment": "The argument for playing this game. Only a floor, and a low one: an empty or one-word case is a failure of the task rather than a style question, which is the distinction pitfall 15 draws."
+          },
+          "tagNotes": {
+            "type": "array",
+            "maxItems": 6,
+            "$comment": "How each tag the person asked for actually shows up in this game. Present only when tags were selected. The schema cannot express the two rules that matter — that a note's tag was requested, and that the catalogue lists this game under it — so src/shortlist.js checks both. That is what keeps this an elaboration on a verified label rather than a new claim: the label is the catalogue's, the sentence is the model's.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["tag", "how"],
+              "properties": {
+                "tag": {
+                  "type": "string",
+                  "$comment": "A tag slug the person selected AND the catalogue lists for this game. Anything else is rejected."
+                },
+                "how": {
+                  "type": "string",
+                  "minLength": 15,
+                  "$comment": "One sentence on what that tag means in this particular game. A floor only — see `case`."
+                }
+              }
+            }
           }
         }
       }

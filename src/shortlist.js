@@ -231,6 +231,41 @@ export function checkShortlist(picks, candidates, request, angleDefs) {
     if (!fits.ok) {
       problems.push(`"${candidate.title}" — ${fits.reason}`);
     }
+
+    // --- tag notes ---------------------------------------------------------
+    // What keeps these an elaboration rather than a new claim: the tag is the
+    // catalogue's and has already been checked, and the model may only write a
+    // sentence about one this game is actually listed under. A note for a tag
+    // the candidate does not carry is the model inventing a property, which is
+    // precisely what the rest of this function exists to stop.
+    const wantedTags = request.tagSlugs ?? [];
+    const carried = wantedTags.filter(t => (candidate.tags || []).includes(t));
+    const notes = pick.tagNotes ?? [];
+
+    const seenNotes = new Set();
+    for (const note of notes) {
+      if (!wantedTags.includes(note.tag)) {
+        problems.push(`"${candidate.title}" explains "${note.tag}", which was not asked for.`);
+        continue;
+      }
+      if (!(candidate.tags || []).includes(note.tag)) {
+        problems.push(`"${candidate.title}" explains "${note.tag}", which the catalogue does not list it under.`);
+        continue;
+      }
+      if (seenNotes.has(note.tag)) {
+        problems.push(`"${candidate.title}" explains "${note.tag}" more than once.`);
+      }
+      seenNotes.add(note.tag);
+    }
+
+    // A gate that can fail in the other direction too: silently dropping the
+    // notes would leave the feature quietly not happening, which looks exactly
+    // like a candidate that happened to carry nothing.
+    if (carried.length > 0 && notes.length === 0) {
+      problems.push(
+        `"${candidate.title}" carries [${carried.join(", ")}] but explains none of them.`
+      );
+    }
   }
 
   return { ok: problems.length === 0, problems };
@@ -266,10 +301,14 @@ export function formatCandidate(c, tagSlugs = []) {
 
 /** A sentence describing the request, for the prompt. */
 export function describeRequest({
-  categorySlug, platformSlugs = [], machineSlugs = [], specific = false, tagSlugs = [],
+  categorySlug, platformSlugs = [], machineSlugs = [], selectionSlugs,
+  specific = false, tagSlugs = [],
 }) {
-  const where = specific ? machineSlugs : platformSlugs;
-  const parts = [`${categorySlug} games`];
+  // What was ticked, not what it resolved to. "on playstation5 or playstation4
+  // or playstation3 or playstation2 or playstation or ps-vita or psp" is a
+  // worse description of a request than "on playstation".
+  const where = selectionSlugs ?? (specific ? machineSlugs : platformSlugs);
+  const parts = [categorySlug ? `${categorySlug} games` : "games of any kind"];
   if (where.length) parts.push(`on ${where.join(" or ")}`);
   if (tagSlugs.length) parts.push(`that are ${tagSlugs.join(" and ")}`);
   return parts.join(" ");
@@ -394,6 +433,9 @@ export async function shortlist({ candidates, request, budget }) {
           // Written by code from the catalogue, never asked of the model.
           angleReason: explainAngle(p, candidate, chosen, request),
           case: p.case,
+          // Checked above: every tag here was asked for and is one the
+          // catalogue lists this game under.
+          tagNotes: p.tagNotes ?? [],
         };
       }),
       usage: { tokens_in: result.tokens_in, tokens_out: result.tokens_out,

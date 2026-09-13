@@ -23,11 +23,25 @@ export function storeConfigured() {
  * missing table rather than a malformed URL. Copying the URL from the dashboard
  * with the REST path already on it does the same thing.
  */
-function baseUrl() {
+export function baseUrl() {
   return String(process.env.SUPABASE_URL)
     .trim()
     .replace(/\/+$/, "")
     .replace(/\/rest\/v1$/, "");
+}
+
+/**
+ * The headers every PostgREST call needs.
+ *
+ * Exported so src/library.js uses the same ones. The service key bypasses Row
+ * Level Security entirely, which is why it lives only here and in the function
+ * — never in anything the browser receives.
+ */
+export function restHeaders() {
+  return {
+    apikey: process.env.SUPABASE_SERVICE_KEY,
+    Authorization: `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+  };
 }
 
 async function insert(table, rows) {
@@ -78,6 +92,46 @@ export async function saveCalls(requestId, calls) {
  * request. Which one, not whether — a count of people who liked something says
  * nothing without knowing what they picked over what.
  */
+/**
+ * Ids shown in the last few shortlists, so the next one can avoid repeating
+ * them.
+ *
+ * The same filters produce the same candidate set — `ordering=-rating` over the
+ * same pages — and the model then answers an identical question, so it lands on
+ * the same three games. Correct behaviour, poor experience.
+ *
+ * Read from `requests.picks`, which has been stored since turn 007 for
+ * criterion 15. No new table and no new concept: what was shown is something
+ * this project already records.
+ *
+ * Deliberately not filtered to the current filters. Matching array columns in
+ * PostgREST is fiddly and it is not worth it — excluding a handful of ids from
+ * a pool of twenty-four costs nothing when the last search was for something
+ * else, and the caller only applies the exclusion when the pool can spare them.
+ *
+ * Returns an empty list on any failure. Variety is a courtesy; losing a
+ * shortlist over one would not be.
+ */
+export async function recentPickIds(limit = 8) {
+  if (!storeConfigured()) return [];
+  try {
+    const url =
+      `${baseUrl()}/rest/v1/requests` +
+      `?select=picks&outcome=eq.shortlisted&order=created_at.desc&limit=${limit}`;
+    const res = await fetch(url, { headers: restHeaders() });
+    if (!res.ok) return [];
+    const rows = await res.json();
+    return [...new Set(
+      rows.flatMap(r => (Array.isArray(r.picks) ? r.picks : []))
+          .map(p => p?.id)
+          .filter(Number.isInteger)
+    )];
+  } catch {
+    return [];
+  }
+}
+
+/** Criterion 15. Records which of the three was clicked. */
 export async function recordClick(requestId, pickId) {
   if (!storeConfigured()) return { ok: true, skipped: true };
   const res = await fetch(

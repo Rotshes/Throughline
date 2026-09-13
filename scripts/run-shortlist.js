@@ -130,6 +130,10 @@ for (const p of result.picks) {
   if (p.angleReason) console.log(`${p.angleReason}`);
   console.log(`${p.title}  (${p.released?.slice(0, 4) ?? "?"})`);
   console.log(`${p.case}\n`);
+  for (const n of p.tagNotes ?? []) {
+    console.log(`   ${n.tag}: ${n.how}`);
+  }
+  if (p.tagNotes?.length) console.log("");
   console.log(`   id ${p.id} · ${p.platforms.join(", ")} · ${p.metacritic ?? "--"} metacritic · ${p.ratingCount} ratings`);
   console.log(`   tags: ${p.tags.join(", ") || "none"}`);
   console.log(`   image: ${p.image ?? "none"}`);

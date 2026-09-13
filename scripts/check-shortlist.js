@@ -74,10 +74,14 @@ const CANDIDATES = [
 
 const REQUEST = { categorySlug: "action", platformSlugs: ["pc"], tagSlugs: ["difficult"] };
 
+// REQUEST asks for "difficult" and every fixture candidate carries it, so a
+// valid response has to explain it — see the tag-note gate below.
+const NOTE = [{ tag: "difficult", how: "Enemies punish greed immediately." }];
+
 const GOOD = [
-  { id: 1, angle: "safe-pick", case: "x".repeat(50) },
-  { id: 2, angle: "deep-cut", case: "x".repeat(50) },
-  { id: 3, angle: "hard-one", case: "x".repeat(50) },
+  { id: 1, angle: "safe-pick", case: "x".repeat(50), tagNotes: NOTE },
+  { id: 2, angle: "deep-cut", case: "x".repeat(50), tagNotes: NOTE },
+  { id: 3, angle: "hard-one", case: "x".repeat(50), tagNotes: NOTE },
 ];
 
 // --- the gate must not fire on a good response --------------------------------
@@ -88,7 +92,10 @@ check("a valid shortlist passes every gate", () => {
 });
 
 check("a request with no tags still passes", () => {
-  const r = checkShortlist(GOOD, CANDIDATES, { categorySlug: "action", platformSlugs: ["pc"] }, ANGLES);
+  // Without notes, because a note for a tag nobody asked for is rejected — the
+  // check below covers that deliberately.
+  const bare = GOOD.map(({ tagNotes, ...p }) => p);
+  const r = checkShortlist(bare, CANDIDATES, { categorySlug: "action", platformSlugs: ["pc"] }, ANGLES);
   assert(r.ok, r.problems.join(" | "));
 });
 
@@ -161,6 +168,50 @@ check("a specific request passes when the machine matches", () => {
   assert(r.ok, r.problems.join(" | "));
 });
 
+check("a mixed request accepts anything the query could have returned", () => {
+  // The turn 009 defect, and the reason the resolved list is built once.
+  //
+  // Selecting the PC family plus a Game Boy Advance asks the catalogue for
+  // PC-or-GBA games. If the gate is handed only the ticked machine it demands
+  // GBA, and every PC game the query legitimately returned is rejected — an
+  // impossible request that looks like a model failure. The gate must accept
+  // exactly what the filter asked for.
+  const pcGame = candidate({ platforms: ["pc"], machines: ["pc"] });
+  const r = checkShortlist(
+    [{ id: 1, angle: "safe-pick", case: "x".repeat(50) }],
+    [pcGame],
+    {
+      categorySlug: "action",
+      platformSlugs: ["pc"],
+      // What the query resolved to, not what was ticked.
+      machineSlugs: ["game-boy-advance", "pc"],
+      specific: true,
+      tagSlugs: [],
+    },
+    ANGLES
+  );
+  assert(r.ok, `a PC game must satisfy a PC-or-GBA request: ${r.problems.join(" | ")}`);
+});
+
+check("a mixed request still rejects a machine nobody asked for", () => {
+  // The fix widens what the gate accepts; it must not disable it.
+  const switchGame = candidate({ platforms: ["nintendo"], machines: ["nintendo-switch"] });
+  const r = checkShortlist(
+    [{ id: 1, angle: "safe-pick", case: "x".repeat(50) }],
+    [switchGame],
+    {
+      categorySlug: "action",
+      platformSlugs: ["pc"],
+      machineSlugs: ["game-boy-advance", "pc"],
+      specific: true,
+      tagSlugs: [],
+    },
+    ANGLES
+  );
+  assert(!r.ok, "a Switch game satisfies neither PC nor GBA");
+  has(r.problems, "nintendo-switch");
+});
+
 check("a family request still checks the family", () => {
   // A PS3-only game satisfies "PlayStation". Narrowing the family check to
   // machines would silently break every request that named no console.
@@ -179,6 +230,25 @@ check("a game not on a selected platform is rejected", () => {
   const r = checkShortlist(GOOD, cands, REQUEST, ANGLES);
   assert(!r.ok);
   has(r.problems, "none of the selected");
+});
+
+check("no category selected means the category check does not fire", () => {
+  // Criterion 4 is conditional on a category having been chosen. With "any",
+  // a puzzle game is a correct answer and rejecting it would make the option
+  // useless.
+  const puzzle = candidate({ categories: ["puzzle"] });
+  const r = checkShortlist(
+    [{ id: 1, angle: "safe-pick", case: "x".repeat(50) }],
+    [puzzle],
+    { categorySlug: null, platformSlugs: ["pc"], tagSlugs: [] },
+    ANGLES
+  );
+  assert(r.ok, r.problems.join(" | "));
+});
+
+check("describeRequest says so when no category was chosen", () => {
+  const s = describeRequest({ categorySlug: null, platformSlugs: ["nintendo"] });
+  assert(s === "games of any kind on nintendo", `got "${s}"`);
 });
 
 check("a game not carrying the selected category is rejected", () => {
@@ -330,6 +400,104 @@ check("describeRequest reads as a request", () => {
   );
   assert(describeRequest({ categorySlug: "indie", platformSlugs: ["pc", "nintendo"] })
     === "indie games on pc or nintendo");
+});
+
+// --- tag notes ----------------------------------------------------------------
+// The model may elaborate on a tag, but only one the catalogue says that game
+// carries. The label is verified; the sentence beside it is not. Writing a note
+// for a tag the game does not have would be the model inventing a property,
+// which is the thing every other gate here exists to stop.
+
+const TAGGED = candidate({ tags: ["difficult", "roguelike"] });
+const TAG_REQUEST = {
+  categorySlug: "action", platformSlugs: ["pc"], tagSlugs: ["difficult", "roguelike"],
+};
+
+function withNotes(notes) {
+  return [{ id: 1, angle: "safe-pick", case: "x".repeat(50), tagNotes: notes }];
+}
+
+check("notes for tags the game carries pass", () => {
+  const r = checkShortlist(
+    withNotes([
+      { tag: "difficult", how: "Enemies punish greed immediately." },
+      { tag: "roguelike", how: "Every run starts from nothing." },
+    ]),
+    [TAGGED], TAG_REQUEST, ANGLES
+  );
+  assert(r.ok, r.problems.join(" | "));
+});
+
+check("a note for a tag the catalogue does not list is rejected", () => {
+  const r = checkShortlist(
+    withNotes([
+      { tag: "difficult", how: "Enemies punish greed immediately." },
+      { tag: "roguelike", how: "Every run starts from nothing." },
+      { tag: "cozy", how: "It is very relaxing." },
+    ]),
+    [TAGGED],
+    { ...TAG_REQUEST, tagSlugs: ["difficult", "roguelike", "cozy"] },
+    ANGLES
+  );
+  assert(!r.ok);
+  has(r.problems, "does not list it under");
+});
+
+check("a note for a tag nobody asked for is rejected", () => {
+  const r = checkShortlist(
+    withNotes([
+      { tag: "difficult", how: "Enemies punish greed immediately." },
+      { tag: "roguelike", how: "Every run starts from nothing." },
+      { tag: "2d", how: "It is flat." },
+    ]),
+    [candidate({ tags: ["difficult", "roguelike", "2d"] })], TAG_REQUEST, ANGLES
+  );
+  assert(!r.ok);
+  has(r.problems, "was not asked for");
+});
+
+check("the same tag explained twice is rejected", () => {
+  const r = checkShortlist(
+    withNotes([
+      { tag: "difficult", how: "Enemies punish greed." },
+      { tag: "difficult", how: "And also it is hard." },
+      { tag: "roguelike", how: "Every run starts from nothing." },
+    ]),
+    [TAGGED], TAG_REQUEST, ANGLES
+  );
+  assert(!r.ok);
+  has(r.problems, "more than once");
+});
+
+check("carrying a requested tag and explaining none of them is rejected", () => {
+  // The gate has to fail in this direction too. Silently dropping the notes
+  // would leave the feature quietly not happening, which looks exactly like a
+  // candidate that happened to carry nothing.
+  const r = checkShortlist(withNotes([]), [TAGGED], TAG_REQUEST, ANGLES);
+  assert(!r.ok);
+  has(r.problems, "explains none of them");
+});
+
+check("a candidate carrying none of the requested tags needs no notes", () => {
+  // It would already fail criterion 4a, so this is checked on its own to be
+  // sure the note rule is not what is firing.
+  const r = checkShortlist(
+    [{ id: 1, angle: "safe-pick", case: "x".repeat(50) }],
+    [candidate({ tags: ["cozy"] })],
+    { categorySlug: "action", platformSlugs: ["pc"], tagSlugs: [] },
+    ANGLES
+  );
+  assert(r.ok, r.problems.join(" | "));
+});
+
+check("no tags requested means no notes are expected", () => {
+  const r = checkShortlist(
+    [{ id: 1, angle: "safe-pick", case: "x".repeat(50) }],
+    [TAGGED],
+    { categorySlug: "action", platformSlugs: ["pc"], tagSlugs: [] },
+    ANGLES
+  );
+  assert(r.ok, r.problems.join(" | "));
 });
 
 // --- explainAngle -------------------------------------------------------------
