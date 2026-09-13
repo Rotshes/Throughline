@@ -62,16 +62,24 @@ export function angleFits(angleDef, candidate) {
       : { ok: false, reason: `"${angleDef.label}" needs one of [${c.tags.join(", ")}]; the catalogue lists [${(candidate.tags || []).join(", ") || "none"}]` };
   }
 
-  if (c.kind === "maxPlaytime") {
-    const p = candidate.playtime ?? 0;
-    // A playtime of 0 means the catalogue does not know, not that the game is
-    // instant. An unknown length is not evidence of a short game, so it fails.
-    if (p === 0) {
-      return { ok: false, reason: `"${angleDef.label}" needs a recorded playtime; the catalogue has none for this game` };
+  if (c.kind === "minCriticScore") {
+    const score = candidate.criticScore;
+    const reviews = candidate.criticReviews ?? 0;
+    // No score means the critics have not weighed in, which is not evidence of
+    // a well-reviewed game. Same shape as the old playtime rule: absent is
+    // unknown, and unknown fails.
+    if (score == null) {
+      return { ok: false, reason: `"${angleDef.label}" needs a critic score; the catalogue has none for this game` };
     }
-    return p <= c.hours
+    // The panel size is checked before the score. A 100 from one reviewer is
+    // what this catalogue returns at the top of an unfiltered sort, and calling
+    // it critically acclaimed would be the gate passing for the wrong reason.
+    if (reviews < c.reviews) {
+      return { ok: false, reason: `"${angleDef.label}" needs at least ${c.reviews} reviews; this has ${reviews}` };
+    }
+    return score >= c.score
       ? { ok: true }
-      : { ok: false, reason: `"${angleDef.label}" needs ${c.hours}h or less; the catalogue says ${p}h` };
+      : { ok: false, reason: `"${angleDef.label}" needs ${c.score} or better; the catalogue says ${score}` };
   }
 
   // An unknown constraint kind must never silently pass. A gate that does
@@ -107,8 +115,11 @@ export function explainAngle(pick, candidate, siblings, request) {
       if (wanted.length && matched.length === wanted.length) {
         return `Matches everything you asked for — ${matched.join(" and ")}.`;
       }
-      if (candidate.metacritic) {
-        return `The best reviewed of the three, at ${candidate.metacritic} on Metacritic.`;
+      if (candidate.criticScore != null) {
+        // Named for the source it actually comes from. This sentence said "on
+        // Metacritic" for four turns while reading a RAWG field, and would have
+        // gone on saying it about an IGDB one.
+        return `The best reviewed of the three, at ${candidate.criticScore} from ${candidate.criticReviews} critics on IGDB.`;
       }
       return `The most rated of the three, by ${n(candidate.ratingCount)} people.`;
     }
@@ -131,14 +142,14 @@ export function explainAngle(pick, candidate, siblings, request) {
         : null;
     }
 
-    case "short-one":
-      return candidate.playtime
-        ? `About ${candidate.playtime} hours, going by the catalogue.`
+    case "acclaimed-one":
+      return candidate.criticScore != null
+        ? `${candidate.criticScore} from ${n(candidate.criticReviews)} critics, per the catalogue.`
         : null;
 
     case "with-someone": {
       const how = (candidate.tags || []).filter(t =>
-        ["co-op", "local-co-op", "online-co-op", "multiplayer", "split-screen", "local-multiplayer", "pvp"].includes(t)
+        ["multiplayer", "co-operative", "split-screen", "massively-multiplayer-online-mmo"].includes(t)
       );
       return how.length ? `Tagged ${how.join(", ")}.` : null;
     }
@@ -294,8 +305,14 @@ export function formatCandidate(c, tagSlugs = []) {
   if (tagSlugs.length) {
     lines.push(`matches what they asked for: ${matched.length ? matched.join(", ") : "none of it"}`);
   }
-  lines.push(`typical playtime: ${c.playtime ? `${c.playtime} hours` : "not recorded"}`);
-  lines.push(`metacritic: ${c.metacritic ?? "none"}   ratings: ${c.ratingCount}`);
+  // No playtime line. The catalogue has no such field, and a line reading
+  // "not recorded" on every single candidate is prompt weight spent saying
+  // nothing — worse, it invites the model to reason about a gap.
+  lines.push(
+    `critic score: ${c.criticScore ?? "none"}` +
+    `${c.criticScore != null ? ` from ${c.criticReviews} reviews` : ""}` +
+    `   people who rated it: ${c.ratingCount}`
+  );
   return lines.join("\n");
 }
 

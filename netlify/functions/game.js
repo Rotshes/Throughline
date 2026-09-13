@@ -1,10 +1,11 @@
 import { fetchGameDetail } from "../../src/detail.js";
-import { readData } from "../../src/paths.js";
 
 /**
  * GET /api/game?id=123 -> one game, in the depth a dialog needs.
  *
- * Read-only, no model, two catalogue requests per uncached open. It exists
+ * Read-only, no model, ONE catalogue request per uncached open — IGDB carries
+ * the summary, the screenshots and the video ids on the same record, where RAWG
+ * needed a second request for the description and sold video separately. It exists
  * because a card carries what the list endpoint gave it, and somebody who clicks
  * a card wants more than that.
  *
@@ -12,15 +13,6 @@ import { readData } from "../../src/paths.js";
  * goes into a URL path. `Number.isInteger` is the whole defence and it is enough
  * — anything that is not a whole number never reaches the catalogue.
  */
-
-let vocab = null;
-function vocabulary() {
-  if (!vocab) {
-    const file = JSON.parse(readData("data/tags.json"));
-    vocab = new Set(file.facets.flatMap(f => f.tags.map(t => t.slug)));
-  }
-  return vocab;
-}
 
 export async function handler(event) {
   if (event.httpMethod !== "GET") {
@@ -37,7 +29,10 @@ export async function handler(event) {
   }
 
   try {
-    const game = await fetchGameDetail(id, vocabulary());
+    // The catalogue module loads and caches its own vocabulary now, from the
+    // same pinned files the query builder resolves slugs against. Two copies
+    // could disagree; one cannot.
+    const game = await fetchGameDetail(id);
     return {
       statusCode: 200,
       headers: {

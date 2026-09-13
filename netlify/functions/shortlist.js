@@ -13,8 +13,8 @@ const json = (status, body) => ({
  * POST /api/shortlist        { category, platforms: [slug], tags: [slug] }
  * POST /api/shortlist/click  { requestId, pickId }
  *
- * The OpenRouter key, the RAWG key and the Supabase service key live here and
- * never reach the browser. Nothing about correctness is decided client-side.
+ * The OpenRouter key, the catalogue credentials and the Supabase service key live
+ * here and never reach the browser. Nothing about correctness is decided client-side.
  *
  * The browser sends slugs, never ids or query parameters. Anything it sends is
  * checked against the pinned vocabularies below before it reaches the catalogue —
@@ -25,9 +25,12 @@ const json = (status, body) => ({
 let vocab = null;
 function vocabularies() {
   if (!vocab) {
-    const categories = JSON.parse(readData("data/categories.json"));
-    const platforms = JSON.parse(readData("data/platforms.json"));
-    const tags = JSON.parse(readData("data/tags.json"));
+    // The IGDB vocabularies — decision 0006. The RAWG files remain in data/
+    // until the RAWG module is deleted, so a record written before the swap can
+    // still be read against the vocabulary that produced it.
+    const categories = JSON.parse(readData("data/categories.igdb.json"));
+    const platforms = JSON.parse(readData("data/platforms.igdb.json"));
+    const tags = JSON.parse(readData("data/tags.igdb.json"));
     vocab = {
       categories: new Set(categories.categories.map(c => c.slug)),
       // Families: "playstation". Machines: "playstation5". Different catalogue
@@ -98,10 +101,12 @@ export async function handler(event) {
     return json(400, { error: `Unknown console: ${unknownMachine.join(", ")}` });
   }
 
-  // One parameter per request. The moment a specific machine is named, every
-  // selection resolves to machine ids — a whole family becomes its children —
-  // rather than sending both parameters and depending on how the catalogue
-  // combines them, which this project has not measured and will not assume.
+  // Whether the person named a console, as opposed to a whole family. It no
+  // longer changes which parameter is sent — IGDB games carry machines and have
+  // no family granularity at all, so every request resolves to machines — but it
+  // still decides how the request is described back to them. "on playstation" is
+  // a better account of what was asked than "on ps5 or ps4 or ps3 or ps2 or ps1
+  // or psvita or psp", which is what it resolves to.
   const specific = machineSlugs.length > 0;
 
   // ONE list, resolved once, used for both the catalogue query and the gate
@@ -123,14 +128,17 @@ export async function handler(event) {
     childrenOf: s => v.familyChildSlugs.get(s),
   });
 
-  const resolvedMachines = resolved.machines;
-  const selectionSlugs = resolved.selection;
+  // Always machines. A family with no console ticked means every console in it,
+  // expanded here rather than sent as a family id, because this catalogue has no
+  // family id to send.
+  const resolvedMachines = specific
+    ? resolved.machines
+    : familySlugs.flatMap(f => v.familyChildSlugs.get(f) ?? []);
 
-  const platformIds = specific
-    ? resolvedMachines.map(s => v.machineIdBySlug.get(s)).filter(Number.isInteger)
-    : familySlugs.map(s => v.familyIdBySlug.get(s));
+  // What the person ticked, for the record and for describing the request.
+  const selectionSlugs = specific ? resolved.selection : familySlugs;
 
-  if (platformIds.length === 0) {
+  if (resolvedMachines.length === 0) {
     return json(400, { error: "Those platforms have no machines the catalogue knows about." });
   }
 
@@ -142,7 +150,8 @@ export async function handler(event) {
     return json(400, { error: `Unknown tag: ${unknownTag.join(", ")}` });
   }
   // A bound on the request, not a style preference. Every extra tag widens the
-  // catalogue query — tags combine with OR, decision 0004 — and a request with
+  // catalogue query — within a facet the ids combine with OR, decision 0004 —
+  // and a request with
   // forty of them is a way to make this endpoint fetch three full pages for
   // nothing.
   if (tagSlugs.length > 6) {
@@ -159,8 +168,10 @@ export async function handler(event) {
       machineSlugs: resolvedMachines,
       // What the person ticked, for the record and the prompt.
       selectionSlugs,
-      platformIds,
-      specific,
+      // Criterion 3 is checked at machine granularity always, because that is
+      // the granularity the query asked at. Saying a game is "on Nintendo" is no
+      // use to someone who asked for a GameCube and owns only that.
+      specific: true,
       tagSlugs,
     });
   } catch (e) {
@@ -197,11 +208,18 @@ export async function handler(event) {
           synopsis: p.synopsis ?? null,
           // Where the button goes. Built here rather than in the browser so the
           // catalogue's address shape stays on this side of the boundary.
-          url: p.slug ? `https://rawg.io/games/${p.slug}` : null,
+          url: p.slug ? `https://www.igdb.com/games/${p.slug}` : null,
           image: p.image,
           screenshots: p.screenshots?.slice(0, 5) ?? [],
           platforms: p.platforms,
-          metacritic: p.metacritic,
+          machines: p.machines,
+          // Named for what it is. IGDB's own aggregation over IGDB's own critic
+          // list, with the size of that list attached — a 100 from one reviewer
+          // and a 97 from twenty-seven are not the same claim.
+          criticScore: p.criticScore,
+          criticReviews: p.criticReviews,
+          // Free here. RAWG wanted $149 a month for it.
+          video: p.video ?? null,
           tags: p.tags,
         }))
       : [],

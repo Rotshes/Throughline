@@ -81,8 +81,13 @@ export default function Home({ inLibrary, busyId, onAdd, onOpen, onFind }) {
                           {g.image
                             ? <img src={g.image} alt="" loading="lazy" />
                             : <div className="rail-noart" aria-hidden="true" />}
-                          {g.metacritic != null && (
-                            <span className="rail-score">{g.metacritic}</span>
+                          {row.showScore && g.criticScore != null && (
+                            <span
+                              className="rail-score"
+                              title={`${g.criticReviews} critic${g.criticReviews === 1 ? "" : "s"}`}
+                            >
+                              {g.criticScore}
+                            </span>
                           )}
                         </div>
                         <p className="rail-title">{g.title}</p>
@@ -134,7 +139,7 @@ export default function Home({ inLibrary, busyId, onAdd, onOpen, onFind }) {
       )}
 
       <p className="meta">
-        Game data and images from RAWG.
+        Game data and images from IGDB.
         {home.cachedFor > 0 && ` Built ${Math.round(home.cachedFor / 60)} minutes ago.`}
       </p>
     </section>

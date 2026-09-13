@@ -1,88 +1,101 @@
 /**
  * One game, in the depth a dialog needs.
  *
- * Everything on the front page and in a shortlist comes from the catalogue's
- * *list* endpoint, which carries a title, one image, platforms and a score. That
- * is enough for a card and not enough for a panel somebody opened on purpose.
+ * Rewritten for IGDB — decision 0006 — and it got smaller, because this
+ * catalogue answers in one request what RAWG took two to answer. `summary`,
+ * every screenshot and the video ids all ride on the same record; RAWG had no
+ * description on its list endpoint and no video at any price under $149/month.
  *
- * So this is a second read, made only when a person clicks — never speculatively,
- * never for a whole row. Two catalogue requests per open, against a monthly
- * twenty thousand. Twelve cards on the front page would be twenty-four requests
- * if they were prefetched, which is why they are not.
+ * Still a second read rather than something prefetched: a front page of twelve
+ * cards would be twelve requests against a rate limit of four per second, for
+ * eleven panels nobody opens.
  *
  * Nothing here involves the model. A dialog is a listing of what the catalogue
  * holds, and if it ever starts making an argument, that argument needs gates.
  */
 
-import { trimDescription, toCandidate } from "./catalogue.js";
-import { config } from "./config.js";
-
-const BASE = "https://api.rawg.io/api";
+import { igdbRequest, imageUrl, youTubeUrl } from "./igdb.js";
+import { toCandidate, loadVocabulary } from "./igdb-catalogue.js";
+import { trimDescription } from "./text.js";
 
 /**
  * A dialog's synopsis can run longer than a shortlist's.
  *
  * 420 is right beside the model's written case, where a long synopsis would
  * drown the argument it sits next to. Here there is no argument to drown — the
- * person opened a panel to read about a game. The trimming rule is the same one,
- * with room to finish a thought.
+ * person opened a panel to read about a game.
  */
 const SYNOPSIS_LIMIT = 1200;
 
-/**
- * How many screenshots the dialog carries.
- *
- * The catalogue returns as many as it has, sometimes over twenty. A gallery of
- * twenty is a page of its own, and every one is a full-size image over somebody
- * else's bandwidth.
- */
+/** The catalogue returns as many screenshots as it has; a gallery of twenty is a page. */
 const MAX_SHOTS = 8;
 
+/** At most this many trailers. The first is usually the one worth watching. */
+const MAX_VIDEOS = 3;
+
+const DETAIL_FIELDS = [
+  "id", "name", "slug", "summary", "storyline", "first_release_date",
+  "aggregated_rating", "aggregated_rating_count", "rating", "rating_count",
+  "cover.image_id", "screenshots.image_id", "artworks.image_id",
+  "videos.video_id", "videos.name",
+  "genres.slug", "themes.slug", "game_modes.slug", "player_perspectives.slug",
+  "platforms.slug", "platforms.abbreviation",
+  "involved_companies.company.name", "involved_companies.developer",
+  "involved_companies.publisher",
+  "age_ratings.rating_category", "websites.url", "websites.category",
+].join(",");
+
 /**
- * Shape a detail record plus its screenshots into what the dialog renders.
+ * Shape a detail record into what the dialog renders.
  *
- * Pure — no network, no key — so it is checked offline against fixtures, which
+ * Pure — no network, no token — so it is checked offline against fixtures, which
  * is the only way any of this gets tested without spending requests.
  *
- * Every field is guarded. The probe in scripts/probe-front.js printed the real
- * response before this was written (turn 005's rule: a documented shape is not a
- * verified one), but a record may still omit any field, and a missing developer
- * must not take the panel down.
- *
- * All text here is third-party and attacker-controlled — nobody in this project
+ * All text here is third-party and attacker-controlled; nobody in this project
  * wrote a word of it. It is rendered as text by React and never as markup, and
  * it never enters a prompt from this path.
  */
-export function shapeDetail(raw, screenshotRows = [], vocabulary) {
-  const base = toCandidate(raw, vocabulary);
+export function shapeDetail(raw, v = loadVocabulary()) {
+  const base = toCandidate(raw, v);
   if (!base) return null;
 
-  // The list record's `short_screenshots` and the screenshots endpoint overlap.
-  // Merge and deduplicate rather than picking one: a record fetched by id has no
-  // `short_screenshots` at all, and a game with a dead screenshots endpoint
-  // still has its header image.
-  const fromEndpoint = Array.isArray(screenshotRows)
-    ? screenshotRows
-        // `is_deleted` is on every screenshot row. A field named that exists
-        // because it is sometimes true, and a withdrawn image is one the
-        // catalogue has decided should not be shown — a dead thumbnail at best
-        // and something nobody chose at worst. Found by printing the response
-        // rather than by reading a field list.
-        .filter(s => s?.is_deleted !== true)
-        .map(s => s?.image)
-        .filter(s => typeof s === "string" && s)
-    : [];
+  // Screenshots first, then artwork. Both are real pictures of the game and the
+  // catalogue keeps them apart; a panel with three screenshots and no art looks
+  // thinner than one that uses what is there.
   const gallery = [];
-  for (const url of [...fromEndpoint, ...base.screenshots]) {
-    // The header image is already shown above the gallery. Repeating it as the
-    // first thumbnail makes the panel look like it has one fewer picture than it
-    // does.
-    if (url === base.image) continue;
-    if (!gallery.includes(url)) gallery.push(url);
+  const sources = [
+    ...(Array.isArray(raw.screenshots) ? raw.screenshots : []),
+    ...(Array.isArray(raw.artworks) ? raw.artworks : []),
+  ];
+  // Deduplicated on the catalogue's image id, NOT on the URL those ids build.
+  // The header is rendered at one size token and a gallery thumbnail at another,
+  // so the same picture produces two different URLs and comparing URLs would let
+  // the cover appear again as the first thumbnail. Found by a check that
+  // expected the old behaviour and got the new one.
+  const seen = new Set();
+  if (typeof raw?.cover?.image_id === "string") seen.add(raw.cover.image_id);
+  for (const s of sources) {
+    const id = typeof s?.image_id === "string" ? s.image_id : null;
+    if (id && seen.has(id)) continue;
+    const url = imageUrl(s, "screenshot");
+    if (!url || url === base.image) continue;
+    if (id) seen.add(id);
+    else if (gallery.includes(url)) continue;
+    gallery.push(url);
     if (gallery.length >= MAX_SHOTS) break;
   }
 
-  const names = list => (Array.isArray(list) ? list.map(x => x?.name).filter(Boolean) : []);
+  const videos = [];
+  for (const vid of Array.isArray(raw.videos) ? raw.videos : []) {
+    const url = youTubeUrl(vid);
+    if (!url || videos.some(x => x.url === url)) continue;
+    // The name is the catalogue's own text and goes into the page as text only.
+    videos.push({ url, name: typeof vid?.name === "string" ? vid.name : null });
+    if (videos.length >= MAX_VIDEOS) break;
+  }
+
+  const companies = Array.isArray(raw.involved_companies) ? raw.involved_companies : [];
+  const named = pick => companies.filter(pick).map(c => c?.company?.name).filter(Boolean);
 
   return {
     id: base.id,
@@ -91,25 +104,39 @@ export function shapeDetail(raw, screenshotRows = [], vocabulary) {
     released: base.released,
     image: base.image,
     gallery,
+    videos,
     platforms: base.platforms,
     machines: base.machines,
     categories: base.categories,
     tags: base.tags,
-    metacritic: base.metacritic,
+    criticScore: base.criticScore,
+    criticReviews: base.criticReviews,
     ratingCount: base.ratingCount,
-    // 0 means the catalogue has no figure, not a game you finish instantly. Every
-    // reader of this field has to know that, so it is carried as null instead and
-    // the ambiguity dies here.
-    playtime: base.playtime > 0 ? base.playtime : null,
-    synopsis: trimDescription(raw?.description_raw, SYNOPSIS_LIMIT),
-    developers: names(raw?.developers).slice(0, 3),
-    publishers: names(raw?.publishers).slice(0, 2),
-    esrb: raw?.esrb_rating?.name ?? null,
-    // Only ever an http(s) address. A catalogue field going into an href is the
-    // one place third-party text stops being inert: `javascript:` in an href
-    // runs. Checked here rather than trusted.
-    website: safeHttpUrl(raw?.website),
+    // `summary` is what the game is; `storyline` is its plot, which is often
+    // absent and occasionally a spoiler. Summary first, storyline only as a
+    // fallback when there is no summary at all.
+    synopsis: trimDescription(raw?.summary ?? raw?.storyline, SYNOPSIS_LIMIT),
+    developers: named(c => c?.developer).slice(0, 3),
+    publishers: named(c => c?.publisher).slice(0, 2),
+    website: firstOfficialSite(raw?.websites),
   };
+}
+
+/**
+ * The game's own site, if it has one.
+ *
+ * IGDB's website category 1 is "official". Anything else is a store page, a
+ * subreddit or a social account, none of which is what "Official site" on a
+ * button means.
+ */
+export function firstOfficialSite(websites) {
+  if (!Array.isArray(websites)) return null;
+  for (const w of websites) {
+    if (w?.category !== 1) continue;
+    const url = safeHttpUrl(w.url);
+    if (url) return url;
+  }
+  return null;
 }
 
 /** An href is only rendered for a URL this project can name the scheme of. */
@@ -117,6 +144,8 @@ export function safeHttpUrl(value) {
   if (typeof value !== "string" || !value) return null;
   try {
     const u = new URL(value);
+    // A catalogue field going into an href is the one place third-party text
+    // stops being inert: `javascript:` in an href runs.
     return u.protocol === "http:" || u.protocol === "https:" ? u.toString() : null;
   } catch {
     return null;
@@ -125,11 +154,6 @@ export function safeHttpUrl(value) {
 
 /**
  * Detail records, kept for as long as the function instance lives.
- *
- * Module scope, so a cold start empties it — the same weak cache as the front
- * page's, and described the same way rather than dressed up. It exists because
- * opening the same panel twice should not cost four requests, not because it
- * bounds anything.
  *
  * Bounded, because an unbounded map keyed on user input is a memory leak with a
  * remote trigger. Oldest out first.
@@ -143,25 +167,14 @@ function remember(id, value) {
   return value;
 }
 
-async function get(path) {
-  const res = await fetch(`${BASE}${path}?key=${encodeURIComponent(config.rawgKey)}`, {
-    headers: { Accept: "application/json" },
-  });
-  if (!res.ok) {
-    const e = new Error(`Catalogue returned ${res.status} for ${path}`);
-    e.kind = "catalogue";
-    e.status = res.status;
-    throw e;
-  }
-  return res.json();
-}
-
 /**
- * Fetch and shape one game. Throws with `kind: "catalogue"` on a failure that is
- * the catalogue's, so the interface can say which service broke — a user who
- * cannot tell cannot report anything useful.
+ * Fetch and shape one game. One request, where the RAWG version needed two.
+ *
+ * Throws with `kind: "catalogue"` on a failure that is the catalogue's, so the
+ * interface can say which service broke — a user who cannot tell cannot report
+ * anything useful.
  */
-export async function fetchGameDetail(id, vocabulary) {
+export async function fetchGameDetail(id, v = loadVocabulary()) {
   if (!Number.isInteger(id) || id <= 0) {
     const e = new Error("Not a catalogue id.");
     e.kind = "request";
@@ -169,19 +182,19 @@ export async function fetchGameDetail(id, vocabulary) {
   }
   if (cache.has(id)) return { ...cache.get(id), cached: true };
 
-  const raw = await get(`/games/${id}`);
+  // `where id = N` with an integer that has already been checked. Nothing
+  // user-supplied is interpolated into an Apicalypse body anywhere in this
+  // project, and an id is the only input this endpoint has.
+  const rows = await igdbRequest("games", `fields ${DETAIL_FIELDS}; where id = ${id}; limit 1;`);
 
-  // The screenshots are the softer of the two requests: a panel with no gallery
-  // is worth showing, a panel with no game is not. So this one failure is
-  // swallowed and the record still opens.
-  let shots = [];
-  try {
-    shots = (await get(`/games/${id}/screenshots`))?.results ?? [];
-  } catch {
-    shots = [];
+  const raw = Array.isArray(rows) ? rows[0] : null;
+  if (!raw) {
+    const e = new Error("The catalogue has no game with that id.");
+    e.kind = "catalogue";
+    throw e;
   }
 
-  const shaped = shapeDetail(raw, shots, vocabulary);
+  const shaped = shapeDetail(raw, v);
   if (!shaped) {
     const e = new Error("The catalogue returned a record this app could not read.");
     e.kind = "catalogue";

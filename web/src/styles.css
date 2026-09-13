@@ -1270,3 +1270,81 @@ main.wide { max-width: 1040px; }
   .sheet-body { padding: 18px 18px 22px; }
   .sheet-body h2 { font-size: 20px; }
 }
+
+/* The trailer. Free on IGDB; RAWG wanted $149 a month for it. */
+.sheet-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  background: #000;
+}
+
+.sheet-art { position: relative; }
+
+.sheet-play {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(16, 17, 26, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  cursor: pointer;
+  backdrop-filter: blur(3px);
+  transition: background 0.16s var(--ease), transform 0.16s var(--ease);
+}
+
+.sheet-play:hover { background: rgba(16, 17, 26, 0.9); transform: translateX(-50%) translateY(-1px); }
+.sheet-play:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* ---------- pictures that are not the shape of their frame ----------
+
+   Every frame here is 16:9 because a screenshot is 16:9. A cover is box art and
+   is portrait, and `object-fit: cover` crops a portrait picture through its
+   middle — which is how Stray's card became a close-up of a cat's chest.
+
+   `contain` is not a compromise: a 1920x1080 screenshot fills a 16:9 frame
+   identically under either rule. It only changes what happens to the pictures
+   that were never going to fit, and letterboxing one is better than cropping
+   the subject out of it. */
+
+.gallery > .gallery-frame > img,
+.sheet-art > img {
+  object-fit: contain;
+}
+
+.gallery-frame {
+  position: relative;
+  display: block;
+  background: var(--sunk);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.gallery-frame > img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  animation: fade 0.3s var(--ease);
+}
+
+.gallery-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: #000;
+}
+
+/* The rail keeps `cover`: a card is small, letterboxing wastes most of it, and
+   the picture there is a screenshot in every case the catalogue can supply one. */

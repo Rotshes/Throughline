@@ -11,14 +11,15 @@ import statusesFile from "../../data/statuses.json";
 // The three pinned vocabularies, baked in at build time. See vite.config.js for
 // why these are imported rather than fetched. Whatever is in these files is the
 // entire vocabulary this product understands — spec.md part 5, pitfall 9.
-import categoriesFile from "../../data/categories.json";
-import platformsFile from "../../data/platforms.json";
-import tagsFile from "../../data/tags.json";
+import categoriesFile from "../../data/categories.igdb.json";
+import platformsFile from "../../data/platforms.igdb.json";
+import tagsFile from "../../data/tags.igdb.json";
 
-// Platforms someone might actually own. The catalogue offers fourteen including
-// 3DO, Neo Geo and Commodore/Amiga; showing those makes the form longer and the
-// results emptier. Ordered by how likely a person is to be holding one.
-const PLATFORM_ORDER = ["pc", "playstation", "xbox", "nintendo", "ios", "android", "mac", "linux", "web"];
+// Platforms someone might actually own. The catalogue knows 220, most of them
+// Amigas, Atari variants and machines with four games; data/platforms.igdb.json
+// is a hand-built selection of nine families and this is the order they appear
+// in. See scripts/pin-igdb.js for what was left out and why.
+const PLATFORM_ORDER = ["pc", "playstation", "xbox", "nintendo", "sega", "mobile", "mac", "linux", "web"];
 
 const CATEGORIES = categoriesFile.categories;
 const PLATFORMS = PLATFORM_ORDER
@@ -449,11 +450,11 @@ export default function App() {
       )}
 
       <footer>
-        {/* Required by RAWG's free tier: an active link back to them from every
-            page that shows their data. A licence condition, not a courtesy. */}
+        {/* Attribution, which IGDB's terms require alongside not bulk
+            re-publishing the dataset. A licence condition, not a courtesy. */}
         <p>
-          Game data and images from{" "}
-          <a href="https://rawg.io/" target="_blank" rel="noreferrer">RAWG</a>.
+          Game data, images and trailers from{" "}
+          <a href="https://www.igdb.com/" target="_blank" rel="noreferrer">IGDB</a>.
         </p>
         <p className="quiet">
           ASE-26 coursework. The three arguments are written by a language model
@@ -630,13 +631,17 @@ function Diagnosis({ diagnosis, narrowed, usedTags }) {
 
 function Pick({ pick, index, chosen, status, busy, onChoose, onRemove }) {
   const shots = useMemo(() => {
-    // The main image is usually also the first screenshot. Dedupe so the strip
-    // does not open with the picture already shown above it.
+    // The main image IS the first screenshot now, so this dedupe does real work
+    // rather than guarding an edge case.
     const all = [pick.image, ...(pick.screenshots ?? [])].filter(Boolean);
     return [...new Set(all)];
   }, [pick]);
 
   const [shown, setShown] = useState(0);
+  // The trailer, where the catalogue has one. Behind a click and never
+  // preloaded: three embedded players loading at once on a page of three
+  // recommendations is a page nobody waits for.
+  const [playing, setPlaying] = useState(false);
 
   return (
     // --i staggers the entrance; the CSS removes it under reduced motion.
@@ -651,17 +656,40 @@ function Pick({ pick, index, chosen, status, busy, onChoose, onRemove }) {
         {pick.title} <span className="year">{pick.released?.slice(0, 4)}</span>
       </h2>
 
-      {shots.length > 0 && (
+      {(shots.length > 0 || pick.video) && (
         <div className="gallery">
-          <img src={shots[shown]} alt={`${pick.title} screenshot`} loading="lazy" />
+          {playing && pick.video ? (
+            <iframe
+              className="gallery-video"
+              src={`${pick.video}?rel=0&autoplay=1`}
+              title={`${pick.title} trailer`}
+              allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          ) : (
+            <div className="gallery-frame">
+              {shots.length > 0 && (
+                <img src={shots[shown]} alt={`${pick.title} screenshot`} loading="lazy" />
+              )}
+              {/* The src is built server-side by youTubeUrl, which checks the id
+                  against YouTube's alphabet before it can reach an iframe. The
+                  value is written by a third party. */}
+              {pick.video && shown === 0 && (
+                <button type="button" className="sheet-play" onClick={() => setPlaying(true)}>
+                  <span aria-hidden="true">▶</span> Watch the trailer
+                </button>
+              )}
+            </div>
+          )}
           {shots.length > 1 && (
             <div className="strip">
               {shots.map((s, i) => (
                 <button
                   key={s}
                   type="button"
-                  className={i === shown ? "thumb on" : "thumb"}
-                  onClick={() => setShown(i)}
+                  className={i === shown && !playing ? "thumb on" : "thumb"}
+                  onClick={() => { setShown(i); setPlaying(false); }}
                   aria-label={`Screenshot ${i + 1} of ${shots.length}`}
                 >
                   <img src={s} alt="" loading="lazy" />
@@ -702,7 +730,9 @@ function Pick({ pick, index, chosen, status, busy, onChoose, onRemove }) {
 
       <p className="facts">
         {pick.platforms.join(" · ")}
-        {pick.metacritic ? ` · ${pick.metacritic} metacritic` : ""}
+        {pick.criticScore != null
+          ? ` · ${pick.criticScore} from ${pick.criticReviews} critics`
+          : ""}
       </p>
 
       {/* The action criterion 15 calls "clicking through". It used to go

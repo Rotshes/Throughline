@@ -15,35 +15,26 @@
  * interface shows it.
  */
 
-import { assembleCandidates, fetchDescription, countFor } from "./catalogue.js";
+// Whichever catalogue is active. src/source.js is the switch and the only place
+// either module is named — see decision 0006.
+import { assembleCandidates, fetchDescription, countFor } from "./source.js";
 import { shortlist } from "./shortlist.js";
 import { createBudget } from "./budget.js";
 import { takeCalls } from "./callLog.js";
 import { saveRequest, saveCalls, storeConfigured, recentPickIds } from "./store.js";
 import { libraryIds } from "./library.js";
 import { config } from "./config.js";
-import { readData } from "./paths.js";
 
 /**
  * What goes in the record when no category was chosen.
  *
  * `requests.category` is `not null`, and a sentinel avoids a second migration
- * for a column that is otherwise fine. It is unambiguous — RAWG has no genre
- * called "any" — but it is a sentinel, which is worth knowing rather than
+ * for a column that is otherwise fine. It is unambiguous — no catalogue this
+ * project has used has a genre called "any" — but it is a sentinel, which is
+ * worth knowing rather than
  * discovering. If the column is ever altered, this becomes null.
  */
 const ANY_CATEGORY = "any";
-
-let vocabularyCache = null;
-
-/** The pinned tag vocabulary, read once per process. */
-function tagVocabulary() {
-  if (!vocabularyCache) {
-    const file = JSON.parse(readData("data/tags.json"));
-    vocabularyCache = new Set(file.facets.flatMap(f => f.tags.map(t => t.slug)));
-  }
-  return vocabularyCache;
-}
 
 /**
  * Why is this pool so small?
@@ -64,14 +55,21 @@ function tagVocabulary() {
  *
  * Never throws. A diagnosis is a courtesy and must not cost anybody a result.
  */
-async function diagnoseThin({ categorySlug, platformIds, specific, tagSlugs, withFilters }) {
+async function diagnoseThin({ categorySlug, machineSlugs, tagSlugs, withFilters }) {
   const out = { withFilters };
   try {
+    // The unfiltered baseline too, now. The catalogue no longer returns a total
+    // with each page — IGDB has a separate /count endpoint — so the number the
+    // interface quotes as "the catalogue holds N for this combination" has to be
+    // asked for rather than read off the response that came back thin.
+    if (out.withFilters == null) {
+      out.withFilters = await countFor({ categorySlug, machineSlugs, tagSlugs });
+    }
     if (tagSlugs.length) {
-      out.withoutTags = await countFor({ categorySlug, platformIds, specific, tagSlugs: [] });
+      out.withoutTags = await countFor({ categorySlug, machineSlugs, tagSlugs: [] });
     }
     if (categorySlug) {
-      out.withoutCategory = await countFor({ categorySlug: null, platformIds, specific, tagSlugs });
+      out.withoutCategory = await countFor({ categorySlug: null, machineSlugs, tagSlugs });
     }
   } catch {
     // A catalogue failure here means no explanation, not a failed request.
@@ -131,15 +129,22 @@ export async function runRequest(request) {
   let assembled;
   try {
     assembled = await assembleCandidates({
-      categorySlug, platformIds, specific, tagSlugs,
-      vocabulary: tagVocabulary(), playedIds: excludeIds,
+      categorySlug, machineSlugs, tagSlugs,
+      playedIds: excludeIds,
+      // Carried so the exclusion can refuse to run against ids from another
+      // catalogue rather than silently matching none of them. A criterion that
+      // cannot be checked has to say so — see db/migration-004-library-source.sql.
+      libraryEntries: library.entries ?? null,
     });
   } catch (e) {
     const failure = {
       category: categorySlug ?? ANY_CATEGORY, platforms: asked, tags: tagSlugs,
       candidate_ids: [], candidate_count: 0, catalogue_count: null,
       outcome: "failed",
-      failure_stage: e.kind === "catalogue" ? "catalogue" : "unexpected",
+      failure_stage:
+        e.kind === "catalogue" ? "catalogue"
+        : e.kind === "library-source" ? "library-source"
+        : "unexpected",
       failure_reason: e.message,
     };
     return {
@@ -156,7 +161,7 @@ export async function runRequest(request) {
   // Only when something is wrong. A healthy pool costs no extra requests.
   const diagnosis = candidates.length < 3
     ? await diagnoseThin({
-        categorySlug, platformIds, specific, tagSlugs,
+        categorySlug, machineSlugs, tagSlugs,
         withFilters: query.catalogueCount ?? null,
       })
     : null;
@@ -170,7 +175,10 @@ export async function runRequest(request) {
     tags: tagSlugs,
     candidate_ids: candidates.map(c => c.id),
     candidate_count: candidates.length,
-    catalogue_count: query.catalogueCount ?? null,
+    // Null unless the result was thin enough for diagnoseThin to go and ask.
+    // IGDB's list endpoint carries no total, and spending a request on every
+    // healthy shortlist to record a number nobody reads is not worth it.
+    catalogue_count: query.catalogueCount ?? diagnosis?.withFilters ?? null,
   };
 
   // --- the empty case --------------------------------------------------------
@@ -242,7 +250,7 @@ export async function runRequest(request) {
   // In parallel, and each one already swallows its own failure. A shortlist that
   // has passed nine gates must not be lost because a description did not load;
   // the card simply has no synopsis, and `synopsesMissing` says how many.
-  const descriptions = await Promise.all(result.picks.map(p => fetchDescription(p.id)));
+  const descriptions = await Promise.all(result.picks.map(p => fetchDescription(p.id, p)));
   const picksWithDetail = result.picks.map((p, i) => ({ ...p, synopsis: descriptions[i] }));
 
   // Stored as shown. Criterion 15 ties a click to the text that persuaded, so

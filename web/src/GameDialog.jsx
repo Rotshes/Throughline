@@ -19,6 +19,10 @@ export default function GameDialog({ game, status, busy, onAdd, onClose }) {
   const ref = useRef(null);
   const [state, setState] = useState({ status: "loading" });
   const [shown, setShown] = useState(0);
+  // Video is the one thing RAWG would not sell at any price under $149 a month.
+  // It stays behind a click rather than replacing the picture outright: a
+  // still loads instantly and a YouTube embed does not.
+  const [playing, setPlaying] = useState(false);
 
   // `game` is the card that was clicked: an id, a title, an image. Enough to
   // draw the panel immediately while the full record is fetched, so opening one
@@ -29,6 +33,7 @@ export default function GameDialog({ game, status, busy, onAdd, onClose }) {
     if (!id) return;
     setState({ status: "loading" });
     setShown(0);
+    setPlaying(false);
     let alive = true;
     fetchGame(id).then(r => { if (alive) setState({ status: "done", result: r }); });
     return () => { alive = false; };
@@ -53,6 +58,7 @@ export default function GameDialog({ game, status, busy, onAdd, onClose }) {
   const image = full?.image ?? game.image;
   const gallery = full?.gallery ?? [];
   const pictures = [image, ...gallery].filter(Boolean);
+  const trailer = full?.videos?.[0] ?? null;
 
   return (
     <dialog
@@ -71,11 +77,37 @@ export default function GameDialog({ game, status, busy, onAdd, onClose }) {
           ×
         </button>
 
-        {pictures.length > 0 && (
+        {/* The trailer when there is one, the header picture otherwise. Never
+            autoplaying and never preloading: a panel that starts making noise
+            because somebody clicked a card is a panel people learn not to open.
+            The src is built by youTubeUrl, which checks the id against YouTube's
+            alphabet before it reaches this attribute — the value is written by a
+            third party and lands in an iframe. */}
+        {playing && trailer ? (
+          <div className="sheet-art">
+            <iframe
+              className="sheet-video"
+              src={`${trailer.url}?rel=0&autoplay=1`}
+              title={trailer.name ?? `${title} trailer`}
+              allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          </div>
+        ) : pictures.length > 0 ? (
           <div className="sheet-art">
             <img src={pictures[Math.min(shown, pictures.length - 1)]} alt="" />
+            {trailer && shown === 0 && (
+              <button
+                type="button"
+                className="sheet-play"
+                onClick={() => setPlaying(true)}
+              >
+                <span aria-hidden="true">▶</span> Watch the trailer
+              </button>
+            )}
           </div>
-        )}
+        ) : null}
 
         <div className="sheet-body">
           <h2>{title}</h2>
@@ -83,8 +115,9 @@ export default function GameDialog({ game, status, busy, onAdd, onClose }) {
           <p className="sheet-facts">
             {full?.released ? longDate(full.released) : game.released ? longDate(game.released) : null}
             {full?.developers?.length ? ` · ${full.developers.join(", ")}` : ""}
-            {full?.metacritic != null ? ` · ${full.metacritic} metacritic` : ""}
-            {full?.playtime ? ` · about ${full.playtime}h, per the catalogue` : ""}
+            {full?.criticScore != null
+              ? ` · ${full.criticScore} from ${full.criticReviews} critics`
+              : ""}
           </p>
 
           {state.status === "loading" && (
@@ -111,7 +144,7 @@ export default function GameDialog({ game, status, busy, onAdd, onClose }) {
                   key={s}
                   type="button"
                   className={i === Math.min(shown, pictures.length - 1) ? "thumb on" : "thumb"}
-                  onClick={() => setShown(i)}
+                  onClick={() => { setShown(i); setPlaying(false); }}
                   aria-label={`Picture ${i + 1} of ${pictures.length}`}
                 >
                   <img src={s} alt="" loading="lazy" />
@@ -160,16 +193,15 @@ export default function GameDialog({ game, status, busy, onAdd, onClose }) {
               </button>
             )}
 
-            {/* The attribution RAWG's free tier requires, and the place to find
-                the things this tier does not carry — trailers, where to buy. */}
+            {/* Attribution, and where to find what this app does not show. */}
             {(full?.slug ?? game.slug) && (
               <a
                 className="sheet-link"
-                href={`https://rawg.io/games/${full?.slug ?? game.slug}`}
+                href={`https://www.igdb.com/games/${full?.slug ?? game.slug}`}
                 target="_blank"
                 rel="noreferrer"
               >
-                On RAWG
+                On IGDB
               </a>
             )}
             {full?.website && (

@@ -1,6 +1,11 @@
 import {
   listLibrary, upsertEntry, removeEntry, isValidStatus, statuses, defaultStatus,
 } from "../../src/library.js";
+// Which catalogue the id in this request came from. Decided here rather than
+// sent by the browser: the browser reports what was clicked, and a client that
+// could name the source could write a row claiming an id belongs to a catalogue
+// it does not.
+import { SOURCE } from "../../src/source.js";
 
 const json = (status, body) => ({
   statusCode: status,
@@ -71,6 +76,7 @@ export async function handler(event) {
 
   const r = await upsertEntry({
     gameId,
+    source: SOURCE,
     status,
     title,
     slug: body.slug ?? null,

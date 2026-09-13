@@ -52,8 +52,8 @@ const ANGLES = [
     constraint: { kind: "anyTag", tags: ["difficult"] },
   },
   {
-    id: "short-one", label: "the short one",
-    constraint: { kind: "maxPlaytime", hours: 12 },
+    id: "acclaimed-one", label: "the one the critics loved",
+    constraint: { kind: "minCriticScore", score: 85, reviews: 5 },
   },
 ];
 
@@ -61,7 +61,7 @@ function candidate(over = {}) {
   return {
     id: 1, title: "Fixture", platforms: ["pc"], machines: ["pc"],
     categories: ["action"],
-    tags: ["difficult"], playtime: 8, metacritic: 90, ratingCount: 1000,
+    tags: ["difficult"], criticScore: 90, criticReviews: 8, ratingCount: 1000,
     released: "2020-01-01", ...over,
   };
 }
@@ -283,7 +283,7 @@ check("two picks are correct from a set of two", () => {
 
 check("a fourth pick is rejected even when every id is valid", () => {
   const four = [...CANDIDATES, candidate({ id: 4, title: "Four" })];
-  const picks = [...GOOD, { id: 4, angle: "short-one", case: "x".repeat(50) }];
+  const picks = [...GOOD, { id: 4, angle: "acclaimed-one", case: "x".repeat(50) }];
   const r = checkShortlist(picks, four, REQUEST, ANGLES);
   assert(!r.ok);
   has(r.problems, "Returned 4 picks; 3 expected");
@@ -342,23 +342,24 @@ check("anyTag names what it wanted and what it found", () => {
   assert(r.reason.includes("none"), "must say the game had none");
 });
 
-check("maxPlaytime passes under the limit and at it", () => {
-  assert(angleFits(ANGLES[4], candidate({ playtime: 4 })).ok);
-  assert(angleFits(ANGLES[4], candidate({ playtime: 12 })).ok, "at the boundary, not past it");
+check("minCriticScore passes above the floor and at it", () => {
+  assert(angleFits(ANGLES[4], candidate({ criticScore: 92, criticReviews: 9 })).ok);
+  assert(angleFits(ANGLES[4], candidate({ criticScore: 85, criticReviews: 5 })).ok, "at the boundary, not past it");
 });
 
-check("maxPlaytime fails over the limit", () => {
-  const r = angleFits(ANGLES[4], candidate({ playtime: 60 }));
+check("minCriticScore fails under the floor", () => {
+  const r = angleFits(ANGLES[4], candidate({ criticScore: 71, criticReviews: 9 }));
   assert(!r.ok);
-  assert(r.reason.includes("60h"), r.reason);
+  assert(r.reason.includes("71"), r.reason);
 });
 
-check("maxPlaytime treats an unrecorded playtime as unknown, not as zero", () => {
-  // The catalogue writes 0 when it does not know. Reading that as "very short"
-  // would label every obscure game the short one.
-  const r = angleFits(ANGLES[4], candidate({ playtime: 0 }));
+check("minCriticScore treats an absent score as unknown, not as zero", () => {
+  // A game the critics have not reviewed is not a badly reviewed game. The old
+  // version of this rule guarded playtime 0 meaning "unknown" rather than
+  // "instant"; the field changed and the confusion did not.
+  const r = angleFits(ANGLES[4], candidate({ criticScore: null, criticReviews: 0 }));
   assert(!r.ok, "0 hours must not pass a 12-hour limit");
-  assert(r.reason.includes("no recorded playtime") || r.reason.includes("has none"), r.reason);
+  assert(r.reason.includes("needs a critic score") || r.reason.includes("has none"), r.reason);
 });
 
 check("an unknown constraint kind fails rather than passing", () => {
@@ -378,10 +379,12 @@ check("formatCandidate shows the id and never asks for it back", () => {
   assert(text.includes("matches what they asked for: difficult"));
 });
 
-check("formatCandidate says a playtime is unrecorded rather than showing 0", () => {
-  const text = formatCandidate(candidate({ playtime: 0 }), []);
-  assert(text.includes("not recorded"), text);
-  assert(!text.includes("0 hours"), "0 would read as instant");
+check("formatCandidate says a critic score is absent rather than showing 0", () => {
+  const text = formatCandidate(candidate({ criticScore: null, criticReviews: 0 }), []);
+  assert(text.includes("critic score: none"), text);
+  // "0" would read as a game the critics hated rather than one they have not
+  // reviewed, which is the same confusion playtime 0 caused before it.
+  assert(!/critic score: 0\b/.test(text), "0 would read as a terrible score");
 });
 
 check("formatCandidate omits the match line when no tags were requested", () => {
@@ -534,13 +537,13 @@ check("the safe pick says so when it matched every tag", () => {
 });
 
 check("the safe pick falls back to a score when no tags were asked for", () => {
-  const c = candidate({ metacritic: 91 });
+  const c = candidate({ criticScore: 91, criticReviews: 7 });
   const r = explainAngle({ angle: "safe-pick" }, c, [c], { tagSlugs: [] });
   assert(r.includes("91"), r);
 });
 
 check("the safe pick falls back again when there is no score either", () => {
-  const c = candidate({ metacritic: null, ratingCount: 1200 });
+  const c = candidate({ criticScore: null, ratingCount: 1200 });
   const r = explainAngle({ angle: "safe-pick" }, c, [c], { tagSlugs: [] });
   assert(r.includes("1,200"), r);
 });
@@ -550,9 +553,9 @@ check("the hard one names the tag it is resting on", () => {
   assert(r.includes("difficult and souls-like"), r);
 });
 
-check("the short one quotes the recorded playtime", () => {
-  const r = explainAngle({ angle: "short-one" }, candidate({ playtime: 6 }), [], REQUEST);
-  assert(r.includes("6 hours"), r);
+check("the acclaimed one quotes the score and the panel size", () => {
+  const r = explainAngle({ angle: "acclaimed-one" }, candidate({ criticScore: 93, criticReviews: 11 }), [], REQUEST);
+  assert(r.includes("93") && r.includes("11"), r);
 });
 
 check("an angle with no fact behind it gets no line rather than an invented one", () => {
@@ -562,7 +565,7 @@ check("an angle with no fact behind it gets no line rather than an invented one"
 });
 
 check("a constrained angle with the fact missing also returns null", () => {
-  assert(explainAngle({ angle: "short-one" }, candidate({ playtime: 0 }), [], REQUEST) === null);
+  assert(explainAngle({ angle: "acclaimed-one" }, candidate({ criticScore: null }), [], REQUEST) === null);
   assert(explainAngle({ angle: "hard-one" }, candidate({ tags: ["cozy"] }), [], REQUEST) === null);
   assert(explainAngle({ angle: "with-someone" }, candidate({ tags: ["cozy"] }), [], REQUEST) === null);
 });

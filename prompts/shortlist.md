@@ -1,7 +1,18 @@
 # Shortlist prompt
 
-version: 1.2
+version: 2.0
 Change this header in place when the text changes, so `git diff` shows what moved.
+
+v2.0 — the catalogue changed from RAWG to IGDB (decision 0006), and two angles
+could not survive it. `short-one` needed a recorded playtime, which IGDB does not
+have. `hard-one` needed a difficulty label, and IGDB's vocabularies contain no
+concept of difficulty at all — leaving it as an unchecked judgement would have
+let any game be called the hard one with nothing able to contradict it.
+`acclaimed-one` replaces both, constrained on a critic score AND the number of
+critics behind it, which is a gate RAWG could not have supported because it held
+no score for any recent release. The v1.1 carve-out shrinks accordingly: length
+is no longer a claim this system can stand behind, so it returns to the
+forbidden list.
 
 v1.2 — adds `tagNotes`. When somebody asks for something cosy, or difficult, or
 playable with another person, "this game is tagged cosy" tells them nothing they
@@ -61,18 +72,18 @@ most once:
 | `deep-cut` | Less known than the others, same appeal. The one they probably have not heard of. |
 | `beautiful-one` | Worth playing for how it looks and sounds alone. |
 | `with-someone` | Playable with another person, in the same room or online. |
-| `hard-one` | The one that will actually fight back. |
-| `short-one` | Finishable in an evening or two, for someone without sixty hours. |
+| `acclaimed-one` | The best reviewed of the three by some distance, for someone who wants a sure thing. |
 
-Three of the six. Pick the three that genuinely describe the games you chose —
+Three of the five. Pick the three that genuinely describe the games you chose —
 do not force an angle onto a game it does not fit.
 
-**Three of these are checked against the catalogue and will be rejected if
-wrong.** `with-someone` requires the game to be tagged for co-operative or
-multiplayer play. `hard-one` requires it to be tagged difficult. `short-one`
-requires a recorded playtime of twelve hours or less. The tags and playtime you
-need are given with each candidate. If none of your three games qualifies for one
-of these angles, use a different angle — do not claim it and hope.
+**Two of these are checked against the catalogue and will be rejected if wrong.**
+`with-someone` requires the game to be listed for multiplayer, co-operative or
+split-screen play. `acclaimed-one` requires a critic score of 85 or better from
+at least five critics — both numbers, because a 100 from one reviewer is not
+acclaim. The labels and the score you need are given with each candidate. If none
+of your three games qualifies for one of these angles, use a different angle — do
+not claim it and hope.
 
 ### Writing the case
 
@@ -80,19 +91,25 @@ Two or three sentences. Say what playing it is actually like and why this person
 in particular would want it.
 
 **Write only what someone could verify by looking at a screenshot or playing for
-ten minutes.** Do not state how long it is, whether it can be played with other
-people, how many levels or endings or characters it has, what it costs, what
-platform features it supports, or what other games it was inspired by. You do not
+ten minutes.** Do not state how long it is, how difficult it is, whether it can
+be played with other people, how many levels or endings or characters it has,
+what it costs, what platform features it supports, or what other games it was
+inspired by. You do not
 have reliable knowledge of those and nothing in this system checks them, so a
 confident wrong claim would reach the reader unchallenged. Write about feel,
 pace, tone, tension, what the player is doing minute to minute.
 
-**Two exceptions, and only two.** The game you gave `short-one` may be described
-as short, and the game you gave `with-someone` may be described as playable with
-another person. Those two claims are checked against the catalogue before your
-answer is accepted — the length and the multiplayer tags are given to you above
-and code verifies them — so they are the only claims of that kind this system can
-stand behind. Make them about the game you assigned that angle to and no other.
+**Two exceptions, and only two.** The game you gave `with-someone` may be
+described as playable with another person, and the game you gave `acclaimed-one`
+may be described as well reviewed. Those two claims are checked against the
+catalogue before your answer is accepted — the play modes and the critic score
+are given to you above and code verifies them — so they are the only claims of
+that kind this system can stand behind. Make them about the game you assigned
+that angle to and no other.
+
+Length is no longer among them. This catalogue records no playtime, so "short",
+"brief", "a weekend game" and anything else about how long it takes are claims
+nothing here can check.
 
 Do not restate the tags back at them. "It is atmospheric and story-rich" tells
 them nothing they did not already choose — the place to talk about what they
@@ -148,7 +165,7 @@ explanation.
     },
     {
       "id": 11726,
-      "angle": "hard-one",
+      "angle": "acclaimed-one",
       "case": "...",
       "tagNotes": [
         { "tag": "difficult", "how": "..." }
@@ -165,7 +182,7 @@ explanation.
 
 Exactly these keys: `picks`, and within each entry `id`, `angle`, `case`, and
 `tagNotes` where the candidate carries tags that were asked for. `id` is a
-number, not a string, and not the title. `angle` is one of the six ids above,
+number, not a string, and not the title. `angle` is one of the five ids above,
 lower case with the hyphen. Each `tagNotes` entry has exactly `tag` and `how`.
 Any other key will be rejected.
 

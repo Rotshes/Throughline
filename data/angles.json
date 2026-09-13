@@ -1,7 +1,15 @@
 {
   "$comment": "The angle vocabulary. The model picks three of these, one per game, and may use no other label. Criterion 6. A free-text 'reason' field would give a gate that passes on 'atmospheric', 'very atmospheric' and 'atmosphere-focused', which is why this is a fixed list checked by membership.",
   "howChecked": "Each angle is either constrained or judgement. A constrained angle names a condition code can test against catalogue data, so the model calling a singleplayer game 'the one to play with someone' is caught. A judgement angle names nothing checkable and code only verifies the label is in this list and does not repeat. Which is which is written down rather than left implicit, because a gate whose reach is unclear gets trusted further than it earns.",
-  "warning": "Constrained angles inherit pitfall 18. Tags fail in both directions: a genuinely co-operative game that RAWG has not tagged will be rejected, the same way Hades is not tagged difficult. Every rejection is logged with the reason so the false-rejection rate is measurable rather than assumed.",
+  "warning": "Constrained angles inherit pitfall 18. Labels fail in both directions: a genuinely co-operative game the catalogue has not labelled will be rejected. Every rejection is logged with the reason so the false-rejection rate is measurable rather than assumed.",
+  "$changedInTurn": "Rewritten for the IGDB migration — decision 0006. Two angles were lost and one gained, and the trade is recorded here rather than inferred from the diff.",
+  "$lost": {
+    "short-one": "Needed a recorded playtime. IGDB games carry no playtime field and the game_time_to_beat endpoint returns 404, so the constraint could never be tested. An angle whose gate can never pass is the same defect as a gate that can never fail.",
+    "hard-one": "Needed a difficulty label. IGDB's vocabularies — 22 themes, 5 game modes, 7 player perspectives — contain no concept of difficulty at all. Leaving it as a judgement angle would have let the model call anything the hard one with nothing able to contradict it, which is worse than not offering it. IGDB's 7,528 keywords probably carry 'difficult' and 'souls-like' and are a way back if it is ever wanted."
+  },
+  "$gained": {
+    "acclaimed-one": "Constrained on a critic score, which RAWG could not have supported at all — it held no score for any 2026 release. The panel size travels with the score because a 100 from one reviewer and a 97 from twenty-seven are not the same claim."
+  },
   "angles": [
     {
       "id": "safe-pick",
@@ -27,26 +35,19 @@
       "meaning": "Playable with another person, in the same room or online.",
       "constraint": {
         "kind": "anyTag",
-        "tags": ["co-op", "local-co-op", "online-co-op", "multiplayer", "split-screen", "local-multiplayer", "pvp"]
+        "tags": ["multiplayer", "co-operative", "split-screen", "massively-multiplayer-online-mmo"],
+        "$comment": "IGDB game_modes, which are structured fields rather than crowd tags. 302 of 713 GameCube games carry split-screen here against 6 of 662 on RAWG, so this gate rejects far fewer games that genuinely qualify than its predecessor did."
       }
     },
     {
-      "id": "hard-one",
-      "label": "the hard one",
-      "meaning": "The one that will actually fight back.",
+      "id": "acclaimed-one",
+      "label": "the one the critics loved",
+      "meaning": "The best reviewed of the three by some distance, for someone who wants a sure thing.",
       "constraint": {
-        "kind": "anyTag",
-        "tags": ["difficult", "souls-like"]
-      }
-    },
-    {
-      "id": "short-one",
-      "label": "the short one",
-      "meaning": "Finishable in an evening or two, for someone without sixty hours.",
-      "constraint": {
-        "kind": "maxPlaytime",
-        "hours": 12,
-        "$comment": "RAWG reports playtime in hours and it is frequently 0, meaning unknown rather than instant. A candidate with playtime 0 fails this constraint rather than passing it — an unknown length is not evidence of a short game. See src/shortlist.js."
+        "kind": "minCriticScore",
+        "score": 85,
+        "reviews": 5,
+        "$comment": "Both numbers matter. A score alone would put a game rated 100 by a single reviewer at the top — which is exactly what IGDB returns when sorted by score with no floor on the count. 5 is not a small panel in this catalogue: Elden Ring's score comes from 10 reviews and Breath of the Wild's from 27."
       }
     }
   ]

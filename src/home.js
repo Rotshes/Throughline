@@ -3,82 +3,74 @@
  *
  * Three rows, each with a source it can stand behind.
  *
- * Two rows that a site like this usually carries are absent, deliberately:
+ * Rewritten for IGDB — decision 0006. The row this page existed to carry, "best
+ * reviewed", was empty for a week on RAWG because RAWG holds no press score for
+ * any 2026 release. It has 294 here, and the filters that make it correct were
+ * found by printing output rather than by reading a field list:
  *
- *   "Popular right now" needs live player counts. That is Steam's API, not the
- *   catalogue's. The nearest thing available is "most added to collections on
- *   RAWG", which is a different claim wearing the same label, and labelling it
- *   the first would be the exact failure this project keeps writing down.
+ *   parent_game = null          without it the row's top entry was a Switch 2
+ *                               re-release of a 2020 game
+ *   aggregated_rating_count     without it every entry scored exactly 100, each
+ *                               from a single reviewer
  *
- *   "Best deals" is a paid catalogue feature. Purchase links and prices are
- *   Business tier — the same discovery as trailers in turn 005.
+ * One row a site like this usually carries is still absent. "Popular right now"
+ * needs live player counts, which is Steam's API and not a catalogue's. Calling
+ * something else by that name would be the exact failure this project keeps
+ * writing down.
  *
- * Each row says where it comes from, because "out in the last 90 days, ordered
- * by how many people added it" and "popular" are not the same sentence.
- *
- * Cost: two catalogue requests per uncached build, against a monthly twenty
- * thousand. The third row costs nothing — it reads this project's own records.
+ * Cost: two catalogue requests per uncached build. The third row costs nothing —
+ * it reads this project's own records.
  */
 
-import { toCandidate } from "./catalogue.js";
-import { config } from "./config.js";
-import { readData } from "./paths.js";
+import { igdbRequest } from "./igdb.js";
+import { toCandidate, loadVocabulary, MIN_CRITIC_REVIEWS } from "./igdb-catalogue.js";
 import { storeConfigured, baseUrl, restHeaders } from "./store.js";
-
-const BASE = "https://api.rawg.io/api";
 
 /**
  * How long a built front page is reused.
  *
- * Module scope, so it survives only as long as a warm function instance — a
- * cold start rebuilds. That is a weak cache and it is the honest description of
- * it: it takes the edge off repeated visits and does not bound the monthly
- * total. A durable cache would be a table, and is not worth one for three rows.
+ * Module scope, so it survives only as long as a warm function instance — a cold
+ * start rebuilds. That is a weak cache and it is the honest description of it: it
+ * takes the edge off repeated visits and does not bound the monthly total.
  */
 const TTL_MS = 30 * 60 * 1000;
 let cached = null;
 
-function vocabulary() {
-  const file = JSON.parse(readData("data/tags.json"));
-  return new Set(file.facets.flatMap(f => f.tags.map(t => t.slug)));
-}
-
-function ymd(d) {
-  return d.toISOString().slice(0, 10);
-}
-
-async function fetchGames(params) {
-  const q = new URLSearchParams({ ...params, key: config.rawgKey });
-  const res = await fetch(`${BASE}/games?${q}`, { headers: { Accept: "application/json" } });
-  if (!res.ok) {
-    const e = new Error(`Catalogue returned ${res.status}`);
-    e.kind = "catalogue";
-    throw e;
-  }
-  return (await res.json()).results ?? [];
-}
+/**
+ * How many critics before a score is a review rather than an opinion.
+ *
+ * Five, and the number is not arbitrary: Elden Ring's score comes from ten
+ * reviews and Breath of the Wild's from twenty-seven, so five is not a small
+ * panel in this catalogue. At a floor of ten, 2026 had nothing at all.
+ */
+const ACCLAIM_MIN_REVIEWS = 5;
 
 /**
- * Trim a candidate to what a front-page card shows.
+ * How far back "recently" reaches for the review row.
  *
- * Deliberately NOT `usable()`. That helper enforces `MIN_RATINGS`, which exists
- * for exactly one reason: keeping the shortlist to games the *model* can write
- * about truthfully — the only defence this project has against pitfall 1.
- *
- * Nothing on the front page goes near a model. It is a listing, and a game
- * released last month has had no time to collect two hundred ratings. Applying
- * the threshold here left one game in a row of forty and emptied the next row
- * entirely.
- *
- * A threshold carried into a context where its reason does not hold is not a
- * safeguard, it is a bug with a good name.
- *
- * The bar here is only that a card can be drawn: a title and a picture. For the
- * recent row, `ordering=-added` already ranks by how much attention a game has
- * had, which is the sort that actually belongs to this question.
+ * Not the calendar year. At a five-review floor, 2026 offers ten games for a row
+ * of twelve — and in January it would offer none, because critics have not
+ * reviewed anything yet. A row that is correct in September and empty in
+ * February is a bug with a seasonal trigger.
  */
-function toCard(raw, vocab) {
-  const c = toCandidate(raw, vocab);
+const ACCLAIM_MONTHS = 18;
+
+const unix = d => Math.floor(d.getTime() / 1000);
+const monthsAgo = n => {
+  const d = new Date();
+  d.setMonth(d.getMonth() - n);
+  return d;
+};
+
+/** Trim a candidate to what a front-page card shows. */
+function toCard(raw, v) {
+  const c = toCandidate(raw, v);
+  // Deliberately NOT `usable()`. That helper enforces a popularity floor whose
+  // reason is keeping the shortlist to games the *model* can write about
+  // truthfully. Nothing on this page goes near a model, and a game released last
+  // month has had no time to collect ratings. A threshold carried into a context
+  // where its reason does not hold is not a safeguard, it is a bug with a good
+  // name — which is what emptied this page's rows once already.
   if (!c || !c.title || !c.image) return null;
   return {
     id: c.id,
@@ -86,8 +78,11 @@ function toCard(raw, vocab) {
     slug: c.slug,
     released: c.released,
     image: c.image,
+    cover: c.cover,
     platforms: c.platforms,
-    metacritic: c.metacritic,
+    machines: c.machines,
+    criticScore: c.criticScore,
+    criticReviews: c.criticReviews,
     ratingCount: c.ratingCount,
   };
 }
@@ -96,9 +91,8 @@ function toCard(raw, vocab) {
  * Games this app has put in front of someone recently.
  *
  * The only row that is genuinely ours rather than the catalogue's, and it costs
- * no catalogue request at all — `requests.picks` has been recorded since turn
- * 007. Newest first, deduplicated, and it carries the angle each was given,
- * which is the part no other site could show.
+ * no catalogue request at all. Newest first, deduplicated, carrying the angle
+ * each was given — the part no other site could show.
  */
 async function recentlySuggested(limit = 12) {
   if (!storeConfigured()) return [];
@@ -135,39 +129,46 @@ export async function buildHome({ force = false } = {}) {
     return { ...cached.value, cachedFor: Math.round((Date.now() - cached.at) / 1000) };
   }
 
-  const vocab = vocabulary();
-  const today = new Date();
-  const ninetyDaysAgo = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
-  const yearStart = new Date(Date.UTC(today.getUTCFullYear(), 0, 1));
-
+  const v = loadVocabulary();
+  const now = unix(new Date());
   const rows = [];
   const failures = [];
 
+  const FIELDS =
+    "id, name, slug, first_release_date, aggregated_rating, aggregated_rating_count, " +
+    // Screenshots as well as the cover. A card's frame is 16:9 and a cover is
+    // portrait box art; asking only for the cover would leave every card cropped
+    // through the middle of its subject.
+    "rating_count, cover.image_id, screenshots.image_id, platforms.slug, genres.slug, " +
+    "themes.slug, game_modes.slug, player_perspectives.slug";
+
   // --- out recently ----------------------------------------------------------
   try {
-    const raw = await fetchGames({
-      dates: `${ymd(ninetyDaysAgo)},${ymd(today)}`,
-      // How many people have added it to a collection. NOT how many are playing
-      // it — the catalogue does not know that, and the label says what this is.
-      ordering: "-added",
-      page_size: "40",
-      exclude_additions: "true",
-    });
-    const games = raw.map(g => toCard(g, vocab)).filter(Boolean).slice(0, 12);
+    const raw = await igdbRequest("games",
+      `fields ${FIELDS};
+       where first_release_date > ${unix(monthsAgo(3))}
+             & first_release_date <= ${now}
+             & parent_game = null & cover != null
+             & themes != (${v.excludedThemeIds.join(",") || 0});
+       sort rating_count desc; limit 40;`);
+
+    const games = raw.map(g => toCard(g, v)).filter(Boolean).slice(0, 12);
     if (games.length === 0) {
-      // Same rule as the row below: everything discarded is a thing to report.
+      // An empty row is a failure, not a state. `games: []` renders the same
+      // words a working row would show if the catalogue genuinely held nothing,
+      // which is how this page hid a bug for a week.
       failures.push({
         row: "recent",
-        reason: `the catalogue returned ${raw.length} recent releases and none had both a title and a picture`,
+        reason: `asked the catalogue for games released in the last three months; ` +
+                `it returned ${raw.length} and none had both a title and a picture`,
       });
     } else {
       rows.push({
         id: "recent",
         title: "Out in the last three months",
-        source: "Ordered by how many people have added it to a collection on RAWG. Not a player count — the catalogue does not have one.",
-        // Every game in this row came out inside one ninety-day window, so the
-        // year says nothing and the date says everything. The row declares it
-        // rather than leaving the interface to infer it from the data.
+        source: "Ordered by how many people have rated it on IGDB. Not a player count — the catalogue does not have one.",
+        // Every game here came out inside one ninety-day window, so the year
+        // says nothing and the date says everything.
         fullDate: true,
         games,
       });
@@ -176,41 +177,36 @@ export async function buildHome({ force = false } = {}) {
     failures.push({ row: "recent", reason: e.message });
   }
 
-  // --- best reviewed this year -----------------------------------------------
+  // --- best reviewed ---------------------------------------------------------
   try {
-    const raw = await fetchGames({
-      dates: `${ymd(yearStart)},${ymd(today)}`,
-      ordering: "-metacritic",
-      page_size: "40",
-      exclude_additions: "true",
-    });
-    const games = raw.map(g => toCard(g, vocab)).filter(Boolean)
-      .filter(g => g.metacritic != null).slice(0, 12);
+    const raw = await igdbRequest("games",
+      `fields ${FIELDS};
+       where first_release_date > ${unix(monthsAgo(ACCLAIM_MONTHS))}
+             & first_release_date <= ${now}
+             & parent_game = null & cover != null
+             & aggregated_rating != null
+             & aggregated_rating_count >= ${ACCLAIM_MIN_REVIEWS}
+             & themes != (${v.excludedThemeIds.join(",") || 0});
+       sort aggregated_rating desc; limit 40;`);
 
-    // An empty row is a failure, not a state.
-    //
-    // This row was empty for a week and looked like a design decision, because
-    // `games: []` renders as "Nothing here yet." — the same words a row would
-    // show if it were working and the catalogue genuinely held nothing. Forty
-    // records came back and every one was discarded here, and nothing said so.
-    //
-    // The rule underneath: when code throws away everything it was given, that
-    // is the most interesting thing that happened in the request, and it is the
-    // one thing the old version did not report.
+    const games = raw.map(g => toCard(g, v)).filter(Boolean)
+      .filter(g => g.criticScore != null).slice(0, 12);
+
     if (games.length === 0) {
       failures.push({
         row: "acclaimed",
-        reason:
-          `asked the catalogue for games released since January ordered by ` +
-          `Metacritic score; it returned ${raw.length} and none of them carried a score`,
+        reason: `asked for games reviewed by at least ${ACCLAIM_MIN_REVIEWS} critics ` +
+                `in the last ${ACCLAIM_MONTHS} months; the catalogue returned ${raw.length}`,
       });
     } else {
       rows.push({
         id: "acclaimed",
-        title: `Best reviewed this year`,
-        // Metacritic is itself the quality bar here — a game that has one has been
-        // reviewed by the press. No ratings floor on top of it.
-        source: "Metacritic score, for games released since January. Only games the press has actually reviewed have one.",
+        title: "Best reviewed in the last year and a half",
+        // The heading says a year and a half rather than "this year" because
+        // that is the window. A calendar year is empty every January, when the
+        // critics have not reviewed anything yet.
+        source: `Critic score on IGDB, from at least ${ACCLAIM_MIN_REVIEWS} reviews. A high score from one reviewer is not acclaim, so those are not here.`,
+        showScore: true,
         games,
       });
     }
@@ -230,7 +226,9 @@ export async function buildHome({ force = false } = {}) {
     });
   }
 
-  const value = { rows, failures, builtAt: new Date().toISOString() };
+  const value = { rows, failures, source: "igdb", builtAt: new Date().toISOString() };
   cached = { at: Date.now(), value };
   return { ...value, cachedFor: 0 };
 }
+
+export { MIN_CRITIC_REVIEWS };
