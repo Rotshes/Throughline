@@ -38,6 +38,12 @@ export const config = {
   get twitchClientSecret() {
     return required("TWITCH_CLIENT_SECRET");
   },
+  // Prices, from IsThereAnyDeal — decision 0007. Free, 1,000 requests per five
+  // minutes, and their terms require attribution and forbid stripping the
+  // affiliate tags from the URLs they return.
+  get itadKey() {
+    return required("ITAD_API_KEY");
+  },
   // One model for both calls to begin with. The two-call split exists partly so
   // this can differ per call later, once the logs justify it. See spec.md part 5,
   // pitfall 8, and decision 0001.

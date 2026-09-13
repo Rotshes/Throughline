@@ -18,6 +18,13 @@
 # and then fail on the first request. See src/paths.js — and note that
 # data/categories.json, platforms.json, tags.json and angles.json are all
 # required, not optional.
+# Three secrets now, and all three are required at request time:
+#   TWITCH_CLIENT_ID / TWITCH_CLIENT_SECRET   the catalogue (IGDB)
+#   OPENROUTER_API_KEY                        the model
+#   ITAD_API_KEY                              prices, for the deals row only
+# A missing ITAD key costs one front-page row and nothing else — the row reports
+# itself as missing rather than taking the page down.
+
 [functions]
   node_bundler = "esbuild"
   included_files = ["prompts/**", "schemas/**", "data/**"]
@@ -27,6 +34,21 @@
 [[redirects]]
   from = "/api/home"
   to   = "/.netlify/functions/home"
+  status = 200
+
+[[redirects]]
+  from = "/api/suggested"
+  to   = "/.netlify/functions/suggested"
+  status = 200
+
+[[redirects]]
+  from = "/api/event"
+  to   = "/.netlify/functions/event"
+  status = 200
+
+[[redirects]]
+  from = "/api/deals"
+  to   = "/.netlify/functions/deals"
   status = 200
 
 [[redirects]]

@@ -210,6 +210,10 @@ export async function handler(event) {
           // catalogue's address shape stays on this side of the boundary.
           url: p.slug ? `https://www.igdb.com/games/${p.slug}` : null,
           image: p.image,
+          // Box art. Not shown on a shortlist card — the frame there is 16:9 —
+          // but carried so that adding a game to the library stores the picture
+          // the library actually wants.
+          cover: p.cover ?? null,
           screenshots: p.screenshots?.slice(0, 5) ?? [],
           platforms: p.platforms,
           machines: p.machines,

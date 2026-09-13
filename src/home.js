@@ -24,7 +24,8 @@
 
 import { igdbRequest } from "./igdb.js";
 import { toCandidate, loadVocabulary, MIN_CRITIC_REVIEWS } from "./igdb-catalogue.js";
-import { storeConfigured, baseUrl, restHeaders } from "./store.js";
+import { buildDealsRow, COUNTRY } from "./deals.js";
+import { buildEventsRow } from "./events.js";
 
 /**
  * How long a built front page is reused.
@@ -88,39 +89,6 @@ function toCard(raw, v) {
 }
 
 /**
- * Games this app has put in front of someone recently.
- *
- * The only row that is genuinely ours rather than the catalogue's, and it costs
- * no catalogue request at all. Newest first, deduplicated, carrying the angle
- * each was given — the part no other site could show.
- */
-async function recentlySuggested(limit = 12) {
-  if (!storeConfigured()) return [];
-  try {
-    const url =
-      `${baseUrl()}/rest/v1/requests` +
-      `?select=picks,created_at&outcome=eq.shortlisted&order=created_at.desc&limit=25`;
-    const res = await fetch(url, { headers: restHeaders() });
-    if (!res.ok) return [];
-    const rows = await res.json();
-
-    const seen = new Set();
-    const out = [];
-    for (const row of rows) {
-      for (const p of Array.isArray(row.picks) ? row.picks : []) {
-        if (!Number.isInteger(p?.id) || seen.has(p.id)) continue;
-        seen.add(p.id);
-        out.push({ id: p.id, title: p.title, angleLabel: p.angleLabel ?? null });
-        if (out.length >= limit) return out;
-      }
-    }
-    return out;
-  } catch {
-    return [];
-  }
-}
-
-/**
  * Build the page. Returns rows plus whichever of them failed, rather than
  * throwing — one dead row should not take the whole page with it.
  */
@@ -165,7 +133,7 @@ export async function buildHome({ force = false } = {}) {
     } else {
       rows.push({
         id: "recent",
-        title: "Out in the last three months",
+        title: "Released in the last three months",
         source: "Ordered by how many people have rated it on IGDB. Not a player count — the catalogue does not have one.",
         // Every game here came out inside one ninety-day window, so the year
         // says nothing and the date says everything.
@@ -201,7 +169,7 @@ export async function buildHome({ force = false } = {}) {
     } else {
       rows.push({
         id: "acclaimed",
-        title: "Best reviewed in the last year and a half",
+        title: "Best reviewed recently",
         // The heading says a year and a half rather than "this year" because
         // that is the window. A calendar year is empty every January, when the
         // critics have not reviewed anything yet.
@@ -214,17 +182,70 @@ export async function buildHome({ force = false } = {}) {
     failures.push({ row: "acclaimed", reason: e.message });
   }
 
-  // --- what this app has been suggesting -------------------------------------
-  const suggested = await recentlySuggested();
-  if (suggested.length) {
-    rows.push({
-      id: "suggested",
-      title: "Recently suggested here",
-      source: "Games this app has actually put in front of somebody, newest first, with the angle each was given.",
-      games: suggested,
-      plain: true,
-    });
+  // --- what was just shown ---------------------------------------------------
+  //
+  // Not "what is coming up". 940 events exist, 33 in the last ninety days, and
+  // ZERO in the future — IGDB records a showcase after it has happened. The
+  // heading says what the data can support and nothing more.
+  try {
+    const shown = await buildEventsRow();
+    if (shown.events.length === 0) {
+      failures.push({
+        row: "events",
+        reason: `no showcase in the last ${shown.windowDays} days has both a logo and games attached`,
+      });
+    } else {
+      rows.push({
+        id: "events",
+        title: "Recent gaming events",
+        source: "Showcases and announcement streams from the last few months, newest first. Every one lists the games it showed — open a card to see them.",
+        events: true,
+        games: shown.events,
+      });
+    }
+  } catch (e) {
+    failures.push({ row: "events", reason: `showcases could not be read: ${e.message}` });
   }
+
+  // --- on sale ---------------------------------------------------------------
+  //
+  // Built from games rather than from discounts. Sorted by discount, the deals
+  // list led with two Epic giveaways, a demo and six Fanatical certification
+  // bundles — so this asks what good games cost instead of what is cheapest.
+  try {
+    const deals = await buildDealsRow();
+    if (deals.games.length === 0) {
+      failures.push({
+        row: "deals",
+        reason: `priced ${deals.resolved ?? 0} well-reviewed games and none of them is discounted right now`,
+      });
+    } else {
+      rows.push({
+        id: "deals",
+        title: "Ongoing gaming deals & discounts",
+        // Two claims the heading could have made and does not. It is not the
+        // biggest discounts anywhere — those are usually on things that are not
+        // games. And it is not your prices unless you are in the US.
+        source: `Prices from IsThereAnyDeal for the ${COUNTRY}, among games critics rated ${82} or better. Not the biggest discounts on the internet — those are rarely on games.`,
+        // Rendered as a list rather than a drifting rail. See web/src/Home.jsx.
+        list: true,
+        // Which slice of the pool this is. The refresh button asks for the next
+        // one, so it has to know where it started.
+        window: deals.window ?? 0,
+        games: deals.games,
+      });
+    }
+  } catch (e) {
+    // Its own service and its own failure. A price outage must not read as the
+    // catalogue being down, and it must not take the other rows with it.
+    failures.push({ row: "deals", reason: `the price service did not answer: ${e.message}` });
+  }
+
+  // The "recently suggested here" row used to sit at the bottom of this page.
+  // It moved to the find page in turn 018 — see src/suggested.js. Among three
+  // rows about what is new, what reviewed well and what is cheap, a record of
+  // this app's own behaviour read as a fourth catalogue listing. It means
+  // something on the page where somebody is about to ask the same question.
 
   const value = { rows, failures, source: "igdb", builtAt: new Date().toISOString() };
   cached = { at: Date.now(), value };
