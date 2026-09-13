@@ -1,0 +1,144 @@
+{
+  "source": "igdb",
+  "pinnedAt": "2026-09-13T03:00:05.209Z",
+  "categories": [
+    {
+      "id": 32,
+      "slug": "indie",
+      "name": "Indie",
+      "games": 127216
+    },
+    {
+      "id": 31,
+      "slug": "adventure",
+      "name": "Adventure",
+      "games": 94830
+    },
+    {
+      "id": 13,
+      "slug": "simulator",
+      "name": "Simulator",
+      "games": 50334
+    },
+    {
+      "id": 15,
+      "slug": "strategy",
+      "name": "Strategy",
+      "games": 44604
+    },
+    {
+      "id": 12,
+      "slug": "role-playing-rpg",
+      "name": "Role-playing (RPG)",
+      "games": 41151
+    },
+    {
+      "id": 9,
+      "slug": "puzzle",
+      "name": "Puzzle",
+      "games": 34402
+    },
+    {
+      "id": 33,
+      "slug": "arcade",
+      "name": "Arcade",
+      "games": 27252
+    },
+    {
+      "id": 5,
+      "slug": "shooter",
+      "name": "Shooter",
+      "games": 22027
+    },
+    {
+      "id": 8,
+      "slug": "platform",
+      "name": "Platform",
+      "games": 20669
+    },
+    {
+      "id": 14,
+      "slug": "sport",
+      "name": "Sport",
+      "games": 16479
+    },
+    {
+      "id": 34,
+      "slug": "visual-novel",
+      "name": "Visual Novel",
+      "games": 14788
+    },
+    {
+      "id": 10,
+      "slug": "racing",
+      "name": "Racing",
+      "games": 12537
+    },
+    {
+      "id": 2,
+      "slug": "point-and-click",
+      "name": "Point-and-click",
+      "games": 7798
+    },
+    {
+      "id": 35,
+      "slug": "card-and-board-game",
+      "name": "Card & Board Game",
+      "games": 6621
+    },
+    {
+      "id": 4,
+      "slug": "fighting",
+      "name": "Fighting",
+      "games": 5802
+    },
+    {
+      "id": 16,
+      "slug": "turn-based-strategy-tbs",
+      "name": "Turn-based strategy (TBS)",
+      "games": 4951
+    },
+    {
+      "id": 25,
+      "slug": "hack-and-slash-beat-em-up",
+      "name": "Hack and slash/Beat 'em up",
+      "games": 4474
+    },
+    {
+      "id": 7,
+      "slug": "music",
+      "name": "Music",
+      "games": 3978
+    },
+    {
+      "id": 24,
+      "slug": "tactical",
+      "name": "Tactical",
+      "games": 3516
+    },
+    {
+      "id": 11,
+      "slug": "real-time-strategy-rts",
+      "name": "Real Time Strategy (RTS)",
+      "games": 2652
+    },
+    {
+      "id": 26,
+      "slug": "quiz-trivia",
+      "name": "Quiz/Trivia",
+      "games": 2401
+    },
+    {
+      "id": 30,
+      "slug": "pinball",
+      "name": "Pinball",
+      "games": 542
+    },
+    {
+      "id": 36,
+      "slug": "moba",
+      "name": "MOBA",
+      "games": 260
+    }
+  ]
+}

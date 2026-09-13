@@ -1,0 +1,365 @@
+{
+  "source": "igdb",
+  "pinnedAt": "2026-09-13T03:00:05.209Z",
+  "handBuilt": true,
+  "platforms": [
+    {
+      "slug": "pc",
+      "name": "PC",
+      "platforms": [
+        {
+          "id": 6,
+          "slug": "win",
+          "name": "PC (Microsoft Windows)",
+          "short": "PC",
+          "generation": null,
+          "games": 177303
+        },
+        {
+          "id": 13,
+          "slug": "dos",
+          "name": "DOS",
+          "short": "DOS",
+          "generation": null,
+          "games": 3877
+        }
+      ]
+    },
+    {
+      "slug": "playstation",
+      "name": "PlayStation",
+      "platforms": [
+        {
+          "id": 167,
+          "slug": "ps5",
+          "name": "PlayStation 5",
+          "short": "PS5",
+          "generation": 9,
+          "games": 9893
+        },
+        {
+          "id": 48,
+          "slug": "ps4--1",
+          "name": "PlayStation 4",
+          "short": "PS4",
+          "generation": 8,
+          "games": 14533
+        },
+        {
+          "id": 9,
+          "slug": "ps3",
+          "name": "PlayStation 3",
+          "short": "PS3",
+          "generation": 7,
+          "games": 3814
+        },
+        {
+          "id": 8,
+          "slug": "ps2",
+          "name": "PlayStation 2",
+          "short": "PS2",
+          "generation": 6,
+          "games": 3830
+        },
+        {
+          "id": 7,
+          "slug": "ps",
+          "name": "PlayStation",
+          "short": "PS1",
+          "generation": 5,
+          "games": 3540
+        },
+        {
+          "id": 46,
+          "slug": "psvita",
+          "name": "PlayStation Vita",
+          "short": "Vita",
+          "generation": 8,
+          "games": 1801
+        },
+        {
+          "id": 38,
+          "slug": "psp",
+          "name": "PlayStation Portable",
+          "short": "PSP",
+          "generation": 7,
+          "games": 2560
+        }
+      ]
+    },
+    {
+      "slug": "xbox",
+      "name": "Xbox",
+      "platforms": [
+        {
+          "id": 169,
+          "slug": "series-x-s",
+          "name": "Xbox Series X|S",
+          "short": "Series X|S",
+          "generation": 9,
+          "games": 7492
+        },
+        {
+          "id": 49,
+          "slug": "xboxone",
+          "name": "Xbox One",
+          "short": "XONE",
+          "generation": 8,
+          "games": 11006
+        },
+        {
+          "id": 12,
+          "slug": "xbox360",
+          "name": "Xbox 360",
+          "short": "X360",
+          "generation": 7,
+          "games": 2873
+        },
+        {
+          "id": 11,
+          "slug": "xbox",
+          "name": "Xbox",
+          "short": "XBOX",
+          "generation": 6,
+          "games": 1087
+        }
+      ]
+    },
+    {
+      "slug": "nintendo",
+      "name": "Nintendo",
+      "platforms": [
+        {
+          "id": 508,
+          "slug": "switch-2",
+          "name": "Nintendo Switch 2",
+          "short": "Switch 2",
+          "generation": 9,
+          "games": 751
+        },
+        {
+          "id": 130,
+          "slug": "switch",
+          "name": "Nintendo Switch",
+          "short": "Switch",
+          "generation": 8,
+          "games": 22459
+        },
+        {
+          "id": 41,
+          "slug": "wiiu",
+          "name": "Wii U",
+          "short": "WiiU",
+          "generation": 8,
+          "games": 1263
+        },
+        {
+          "id": 5,
+          "slug": "wii",
+          "name": "Wii",
+          "short": "Wii",
+          "generation": 7,
+          "games": 2614
+        },
+        {
+          "id": 21,
+          "slug": "ngc",
+          "name": "Nintendo GameCube",
+          "short": "NGC",
+          "generation": 6,
+          "games": 713
+        },
+        {
+          "id": 4,
+          "slug": "n64",
+          "name": "Nintendo 64",
+          "short": "N64",
+          "generation": 5,
+          "games": 503
+        },
+        {
+          "id": 19,
+          "slug": "snes",
+          "name": "Super Nintendo Entertainment System",
+          "short": "SNES",
+          "generation": 4,
+          "games": 927
+        },
+        {
+          "id": 18,
+          "slug": "nes",
+          "name": "Nintendo Entertainment System",
+          "short": "NES",
+          "generation": 3,
+          "games": 1080
+        },
+        {
+          "id": 37,
+          "slug": "3ds",
+          "name": "Nintendo 3DS",
+          "short": "3DS",
+          "generation": 8,
+          "games": 1744
+        },
+        {
+          "id": 20,
+          "slug": "nds",
+          "name": "Nintendo DS",
+          "short": "NDS",
+          "generation": 7,
+          "games": 2774
+        },
+        {
+          "id": 24,
+          "slug": "gba",
+          "name": "Game Boy Advance",
+          "short": "GBA",
+          "generation": 6,
+          "games": 1428
+        },
+        {
+          "id": 22,
+          "slug": "gbc",
+          "name": "Game Boy Color",
+          "short": "GBC",
+          "generation": 5,
+          "games": 1022
+        },
+        {
+          "id": 33,
+          "slug": "gb",
+          "name": "Game Boy",
+          "short": "Game Boy",
+          "generation": 4,
+          "games": 1019
+        }
+      ]
+    },
+    {
+      "slug": "sega",
+      "name": "Sega",
+      "platforms": [
+        {
+          "id": 23,
+          "slug": "dc",
+          "name": "Dreamcast",
+          "short": "DC",
+          "generation": 6,
+          "games": 638
+        },
+        {
+          "id": 32,
+          "slug": "saturn",
+          "name": "Sega Saturn",
+          "short": "Saturn",
+          "generation": 5,
+          "games": 949
+        },
+        {
+          "id": 29,
+          "slug": "genesis-slash-megadrive",
+          "name": "Sega Mega Drive/Genesis",
+          "short": "Genesis/MegaDrive",
+          "generation": 4,
+          "games": 1270
+        },
+        {
+          "id": 78,
+          "slug": "sega-cd",
+          "name": "Sega CD",
+          "short": "Sega CD",
+          "generation": 4,
+          "games": 222
+        },
+        {
+          "id": 30,
+          "slug": "sega32",
+          "name": "Sega 32X",
+          "short": "Sega32",
+          "generation": 4,
+          "games": 44
+        },
+        {
+          "id": 35,
+          "slug": "gamegear",
+          "name": "Sega Game Gear",
+          "short": "Game Gear",
+          "generation": 4,
+          "games": 255
+        },
+        {
+          "id": 64,
+          "slug": "sms",
+          "name": "Sega Master System/Mark III",
+          "short": "SMS",
+          "generation": 3,
+          "games": 369
+        }
+      ]
+    },
+    {
+      "slug": "mac",
+      "name": "Mac",
+      "platforms": [
+        {
+          "id": 14,
+          "slug": "mac",
+          "name": "Mac",
+          "short": "Mac",
+          "generation": null,
+          "games": 32222
+        }
+      ]
+    },
+    {
+      "slug": "linux",
+      "name": "Linux",
+      "platforms": [
+        {
+          "id": 3,
+          "slug": "linux",
+          "name": "Linux",
+          "short": "Linux",
+          "generation": null,
+          "games": 21763
+        }
+      ]
+    },
+    {
+      "slug": "mobile",
+      "name": "Phone or tablet",
+      "platforms": [
+        {
+          "id": 39,
+          "slug": "ios",
+          "name": "iOS",
+          "short": "iOS",
+          "generation": null,
+          "games": 19153
+        },
+        {
+          "id": 34,
+          "slug": "android",
+          "name": "Android",
+          "short": "Android",
+          "generation": null,
+          "games": 18890
+        }
+      ]
+    },
+    {
+      "slug": "web",
+      "name": "Browser",
+      "platforms": [
+        {
+          "id": 82,
+          "slug": "browser",
+          "name": "Web browser",
+          "short": "browser",
+          "generation": null,
+          "games": 13991
+        }
+      ]
+    }
+  ]
+}
