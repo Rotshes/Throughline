@@ -1,0 +1,219 @@
+{
+  "source": "igdb",
+  "pinnedAt": "2026-09-13T03:11:11.696Z",
+  "facets": [
+    {
+      "id": "theme",
+      "label": "Setting and feel",
+      "field": "themes",
+      "tags": [
+        {
+          "id": 1,
+          "slug": "action",
+          "name": "Action",
+          "games": 110748
+        },
+        {
+          "id": 17,
+          "slug": "fantasy",
+          "name": "Fantasy",
+          "games": 25873
+        },
+        {
+          "id": 18,
+          "slug": "science-fiction",
+          "name": "Science fiction",
+          "games": 19704
+        },
+        {
+          "id": 19,
+          "slug": "horror",
+          "name": "Horror",
+          "games": 18445
+        },
+        {
+          "id": 27,
+          "slug": "comedy",
+          "name": "Comedy",
+          "games": 12075
+        },
+        {
+          "id": 43,
+          "slug": "mystery",
+          "name": "Mystery",
+          "games": 7754
+        },
+        {
+          "id": 21,
+          "slug": "survival",
+          "name": "Survival",
+          "games": 6854
+        },
+        {
+          "id": 34,
+          "slug": "educational",
+          "name": "Educational",
+          "games": 6798
+        },
+        {
+          "id": 35,
+          "slug": "kids",
+          "name": "Kids",
+          "games": 6522
+        },
+        {
+          "id": 44,
+          "slug": "romance",
+          "name": "Romance",
+          "games": 6300
+        },
+        {
+          "id": 22,
+          "slug": "historical",
+          "name": "Historical",
+          "games": 5260
+        },
+        {
+          "id": 40,
+          "slug": "party",
+          "name": "Party",
+          "games": 4653
+        },
+        {
+          "id": 38,
+          "slug": "open-world",
+          "name": "Open world",
+          "games": 4648
+        },
+        {
+          "id": 31,
+          "slug": "drama",
+          "name": "Drama",
+          "games": 4389
+        },
+        {
+          "id": 33,
+          "slug": "sandbox",
+          "name": "Sandbox",
+          "games": 4198
+        },
+        {
+          "id": 39,
+          "slug": "warfare",
+          "name": "Warfare",
+          "games": 4148
+        },
+        {
+          "id": 28,
+          "slug": "business",
+          "name": "Business",
+          "games": 2574
+        },
+        {
+          "id": 32,
+          "slug": "non-fiction",
+          "name": "Non-fiction",
+          "games": 2358
+        },
+        {
+          "id": 20,
+          "slug": "thriller",
+          "name": "Thriller",
+          "games": 2230
+        },
+        {
+          "id": 23,
+          "slug": "stealth",
+          "name": "Stealth",
+          "games": 2182
+        }
+      ]
+    },
+    {
+      "id": "mode",
+      "label": "How you play it",
+      "field": "game_modes",
+      "tags": [
+        {
+          "id": 1,
+          "slug": "single-player",
+          "name": "Single player",
+          "games": 229045
+        },
+        {
+          "id": 2,
+          "slug": "multiplayer",
+          "name": "Multiplayer",
+          "games": 47061
+        },
+        {
+          "id": 3,
+          "slug": "co-operative",
+          "name": "Co-operative",
+          "games": 22534
+        },
+        {
+          "id": 5,
+          "slug": "massively-multiplayer-online-mmo",
+          "name": "Massively Multiplayer Online (MMO)",
+          "games": 4836
+        },
+        {
+          "id": 4,
+          "slug": "split-screen",
+          "name": "Split screen",
+          "games": 4800
+        }
+      ]
+    },
+    {
+      "id": "view",
+      "label": "Point of view",
+      "field": "player_perspectives",
+      "tags": [
+        {
+          "id": 3,
+          "slug": "bird-view-slash-isometric",
+          "name": "Bird view / Isometric",
+          "games": 37608
+        },
+        {
+          "id": 4,
+          "slug": "side-view",
+          "name": "Side view",
+          "games": 34250
+        },
+        {
+          "id": 1,
+          "slug": "first-person",
+          "name": "First person",
+          "games": 31117
+        },
+        {
+          "id": 2,
+          "slug": "third-person",
+          "name": "Third person",
+          "games": 26379
+        },
+        {
+          "id": 5,
+          "slug": "text",
+          "name": "Text",
+          "games": 13462
+        },
+        {
+          "id": 7,
+          "slug": "virtual-reality",
+          "name": "Virtual Reality",
+          "games": 4089
+        },
+        {
+          "id": 6,
+          "slug": "auditory",
+          "name": "Auditory",
+          "games": 1109
+        }
+      ]
+    }
+  ]
+}
