@@ -74,7 +74,10 @@ disagree about whether it was met.
    selected.** Checked in code against the catalogue's platform data — never
    against the model's claim, and never inferred from the prompt having said so.
 4. **Every recommended game carries the selected category** according to the
-   catalogue's own classification.
+   catalogue's own classification. **A category is optional** — "any kind of
+   game" is a request rather than a missing field, and this criterion does not
+   apply when none was chosen. Nineteen coarse genres (pitfall 9) mean insisting
+   on one excludes good answers for a distinction the user never made.
 4a. **Where tags were selected, the catalogue says each recommended game carries
    at least one of them.** Read that wording exactly. Criteria 3 and 4 assert
    facts the catalogue holds; this asserts only that a label is present. Tags are
