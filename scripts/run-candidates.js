@@ -50,10 +50,13 @@ const playedIds = (flag("played") || "")
   .filter(Number.isInteger);
 
 if (!categorySlug || !platformArg) {
-  console.error("usage: node scripts/run-candidates.js <category> <platform,platform> [--tags a,b] [--played id,id]");
+  console.error("usage: node scripts/run-candidates.js <category|any> <platform,platform> [--tags a,b] [--played id,id]");
   console.error("run scripts/pin-vocabularies.js and scripts/pin-tags.js first to see the valid values");
   process.exit(1);
 }
+
+// "any" means no genre filter, the same as the dropdown's default.
+const category = categorySlug === "any" ? null : categorySlug;
 
 // --- resolve the vocabularies -----------------------------------------------
 // Slugs are checked against the pinned files rather than sent straight through.
@@ -121,7 +124,7 @@ const started = Date.now();
 let result;
 try {
   result = await assembleCandidates({
-    categorySlug,
+    categorySlug: category,
     platformIds,
     specific,
     tagSlugs,
@@ -137,7 +140,7 @@ try {
 const { candidates, query } = result;
 const elapsed = ((Date.now() - started) / 1000).toFixed(1);
 
-console.log(`\nfilter: ${categorySlug} on ${platformArg}${tagSlugs.length ? ` tagged ${tagSlugs.join(" + ")}` : ""}`);
+console.log(`\nfilter: ${category ?? "any kind of game"} on ${platformArg}${tagSlugs.length ? ` tagged ${tagSlugs.join(" + ")}` : ""}`);
 console.log(`catalogue holds ${query.catalogueCount ?? "?"} games for this filter`);
 console.log(`${candidates.length} candidates in ${elapsed}s`);
 if (tagSlugs.length > 1) {
@@ -176,7 +179,9 @@ const wantedPlatforms = platformArg.split(",").map(s => s.trim());
 const offPlatform = candidates.filter(c =>
   !(specific ? c.machines : c.platforms).some(p => wantedPlatforms.includes(p))
 );
-const offCategory = candidates.filter(c => !c.categories.includes(categorySlug));
+const offCategory = category
+  ? candidates.filter(c => !c.categories.includes(category))
+  : [];
 const offTag = tagSlugs.length
   ? candidates.filter(c => !tagSlugs.some(t => c.tags.includes(t)))
   : [];

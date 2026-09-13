@@ -61,6 +61,7 @@ function throws(fn, matching) {
 
 const rawFull = {
   id: 3498,
+  slug: "fixture-game",
   name: "Fixture Game",
   released: "2013-09-17",
   background_image: "https://example.invalid/a.jpg",
@@ -102,8 +103,18 @@ const VOCAB = new Set(["singleplayer", "atmospheric", "roguelike", "cozy", "diff
 
 // --- buildPoolQuery ---------------------------------------------------------
 
-check("buildPoolQuery rejects a missing category", () => {
-  throws(() => buildPoolQuery({ platformIds: [1] }), "categorySlug is required");
+check("buildPoolQuery omits the genre filter when no category was chosen", () => {
+  // "Any kind of game" is a request, not a missing field. The nineteen genres
+  // are coarse (pitfall 9) and a default of one of them quietly excludes most of
+  // the catalogue before the person has said anything.
+  for (const absent of [undefined, null, ""]) {
+    const q = buildPoolQuery({ categorySlug: absent, platformIds: [1] });
+    assert(!("genres" in q), `genres must be absent, not empty, for ${JSON.stringify(absent)}`);
+  }
+});
+
+check("buildPoolQuery still rejects a category that is not a string", () => {
+  throws(() => buildPoolQuery({ categorySlug: 42, platformIds: [1] }), "must be a string");
 });
 
 check("buildPoolQuery rejects an empty platform list", () => {
@@ -206,6 +217,14 @@ check("toCandidate rejects a record with no id", () => {
   assert(toCandidate({ name: "x" }) === null);
   assert(toCandidate(null) === null);
   assert(toCandidate({ id: "3498" }) === null, "a string id is not an id");
+});
+
+check("toCandidate keeps the slug, and defaults it to null", () => {
+  // The pick's link is built from this. A missing slug must be null rather than
+  // undefined, so the layer above renders a plain button instead of a link to
+  // "rawg.io/games/undefined".
+  assert(toCandidate(rawFull).slug === "fixture-game");
+  assert(toCandidate(rawBare).slug === null);
 });
 
 check("toCandidate maps every field it is asked for", () => {

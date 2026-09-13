@@ -243,8 +243,13 @@ export function buildPoolQuery({
   pageSize = 40,
   page = 1,
 }) {
-  if (!categorySlug || typeof categorySlug !== "string") {
-    throw new Error("buildPoolQuery: categorySlug is required.");
+  // A category is optional. "Any kind of game" is a real request — someone who
+  // knows they want something cosy on a Switch does not necessarily care whether
+  // the catalogue files it under adventure or simulation, and the nineteen
+  // genres are coarse enough (pitfall 9) that insisting on one excludes good
+  // answers for a distinction the user did not make.
+  if (categorySlug != null && typeof categorySlug !== "string") {
+    throw new Error("buildPoolQuery: categorySlug must be a string or absent.");
   }
   if (!Array.isArray(platformIds) || platformIds.length === 0) {
     throw new Error("buildPoolQuery: at least one platform id is required.");
@@ -260,7 +265,9 @@ export function buildPoolQuery({
   }
 
   const query = {
-    genres: categorySlug,
+    // Omitted entirely when no category was chosen. An empty `genres=` is not
+    // the same request as no `genres` at all — the same reasoning as tags.
+    ...(categorySlug ? { genres: categorySlug } : {}),
     // Two parameters, never both. `parent_platforms` takes family ids — 2 is
     // every PlayStation ever made — and `platforms` takes machine ids, where 187
     // is a PS5 and nothing else.
@@ -287,6 +294,22 @@ export function buildPoolQuery({
   if (tagSlugs.length) query.tags = tagSlugs.join(",");
 
   return query;
+}
+
+/**
+ * How many games the catalogue holds for a filter. One request, one number.
+ *
+ * Used to explain a thin result rather than to produce one. When a pool comes
+ * back nearly empty the person needs to know *which* filter did it, and the
+ * only honest way to answer is to ask the same question again without that
+ * filter and compare.
+ */
+export async function countFor({ categorySlug, platformIds, specific, tagSlugs = [] }) {
+  const query = buildPoolQuery({
+    categorySlug, platformIds, specific, tagSlugs, pageSize: 1,
+  });
+  const data = await request("/games", query);
+  return data.count ?? null;
 }
 
 /**
@@ -331,6 +354,11 @@ export function toCandidate(raw, vocabulary) {
 
   return {
     id: raw.id,
+    // The catalogue's own slug, which is how a game's page is addressed. Kept
+    // so a pick can link somewhere: rawg.io/games/<slug> always exists, carries
+    // screenshots and where-to-buy links, and linking there is the attribution
+    // their free tier requires rather than a second thing to remember.
+    slug: raw.slug ?? null,
     title: raw.name ?? null,
     released: raw.released ?? null,
     image: raw.background_image ?? null,
