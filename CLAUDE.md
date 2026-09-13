@@ -29,8 +29,9 @@ three specific titles with images and a written case for each.
 Coursework for ASE-26. The course grades how well the agent is directed, not the
 app. The written record in this repository is the deliverable.
 
-Read `docs/spec.md` before doing anything. It is the authority. It is at v2.0;
+Read `docs/spec.md` before doing anything. It is the authority. It is at v3.0;
 v1.x described a different product and `docs/decisions/0003` says why it changed.
+v2.x described the same product on a different catalogue — `docs/decisions/0006`.
 
 ## The rule the design rests on
 
@@ -42,8 +43,10 @@ Three steps:
 1. **Filter.** Category and platform selections become a catalogue query. No
 model call. Pure code, testable with no key and no cost.
 2. **Candidate set.** The catalogue returns a pool; code reduces it to twenty to
-fifty candidates with stable ids, removes anything in the played library, and
-logs the set.
+fifty candidates with stable ids, removes anything in the library, and logs the
+set. A library entry records which catalogue its id came from, and the exclusion
+**throws** rather than quietly matching nothing when they disagree — see
+`db/migration-004-library-source.sql`.
 3. **Shortlist.** One call returns three ids, each with an angle label and a
 written case. Code checks every id against the set, every platform against the
 catalogue, and every angle against the permitted vocabulary.
@@ -72,17 +75,25 @@ and a count. Relaxing a filter the user set is a stop-and-ask.
 it. The mitigation is keeping the prompt off checkable specifics — hours of
 content, co-op support, feature lists — and onto what a person can judge from a
 screenshot. This is the largest known gap in the project and it is deliberate.
-* **RAWG, behind `src/catalogue.js`.** One module holds every catalogue call so
-the source can change for the cost of one file and a decision record. IGDB was
-considered and is not needed — decision 0004.
-* **A request is category + platforms + optional tags.** The tag vocabulary is
-hand-picked and pinned to `data/tags.json`; 9,736 tags exist and most are store
-plumbing or non-English duplicates. Whatever is in the three pinned files in
-`data/` is the entire vocabulary this product understands.
-* **Platforms are facts, tags are claims.** The catalogue calls God of War (2018)
-a souls-like and Dota 2 a tower defence. A tag gate proves a label is present and
+* **IGDB, behind `src/igdb-catalogue.js`.** One module holds every catalogue call
+so the source can change for the cost of one file and a decision record. That
+claim was tested in turn 015 and held: `src/source.js` is the switch and it is one
+line. RAWG was the source until then; decision 0006 records what was measured,
+what it cost and what was given up. `src/catalogue.js` still exists and still
+passes its checks — it is deleted when the branch has been deployed and proven.
+* **A request is category + platforms + optional tags.** The vocabularies are
+pinned to `data/*.igdb.json` and the platform tree is hand-built, because IGDB has
+five platform families and PC is in none of them. Whatever is in those files is
+the entire vocabulary this product understands.
+* **Platforms and dates are facts. Everything else the catalogue says is a
+claim.** Not just tags — genres too. RAWG called God of War a souls-like; IGDB
+files Breath of the Wild under `puzzle`. A gate proves a label is present and
 nothing more. Never let a criterion, a prompt or a line of interface copy claim
-more than that.
+more than that. (Widened in turn 015: the old wording said "tags are claims" and
+let categories through as though they were facts.)
+* **Three external services now: IGDB, OpenRouter, IsThereAnyDeal.** Four secrets.
+Each has its own failure `kind` so a person can tell which one broke — criterion
+13 is not decoration once there is more than one.
 * **The played library excludes, it does not personalise.** Hand entry first,
 Steam import filling the same table later. It never feeds the shortlist call.
 * **One model call per request.** The two-call split of v1.x is gone with the
@@ -122,61 +133,18 @@ why I chose it. Ask.
 
 ## Failures seen before
 
-One line each, added as they happen. Written once, permanently. These stay even
-where the code they refer to is gone — the lesson outlived the design.
+Twenty-one of them, in `docs/failures.md`. **Read it before writing code.**
 
-* **A prompt cannot reference a file the model cannot read.** All three v1
-  prompts said "conforming to `schemas/motifs.schema.json`" and the model guessed
-  the shape wrong. Any shape a model must produce goes in the prompt text in
-  full, with the exact field names and the keys that will be rejected. (Turn 001)
-* **Model identifiers go stale.** A retired or misspelled id returns HTTP 404
-  "no endpoints found". The id lives in the environment, never in code. Current
-  list: https://openrouter.ai/api/v1/models (Turn 001)
-* **A gate can pass for the wrong reason.** The injection test paired the
-  malicious title with one unrelated game, so a null result was correct whether
-  or not the instruction was resisted. Before trusting a gate, ask what result
-  would look like a pass while the thing being tested had failed. (Turn 001)
-* **Writing that rule down did not make it apply.** The same case was rewritten
-  to fix exactly that flaw, kept the shape that caused it, and failed the same
-  way in production four turns later. A rule in this file is a prompt for a
-  check, not the check. (Turn 004)
-* **A stale result looks exactly like a fresh one.** A repeated run was caught
-  only because its logged latency matched the previous one to the millisecond.
-  Read the per-call figures, not just the output. (Turn 001)
-* **A rule too obvious to write down is a rule the model does not have.** Nothing
-  said "do not recommend a game they already named", so it did, twice, while
-  passing every gate. Where a rule can be made structurally impossible in code,
-  it belongs there rather than in a prompt. (Turn 002)
-* **A numeric limit in a prompt is a request, not a constraint.** "3 to 60
-  characters" produced 61 twice in a row. Retrying could not help: it was the
-  model's natural output length, not a transient failure. (Turn 002)
-* **Local green says nothing about a deployed artifact.** Six failures appeared
-  only outside local development while 37 offline checks passed through all of
-  them. Bundling, environment variables and host settings are all part of the
-  program. (Turn 003)
-* **An ignored query parameter looks exactly like a working one.** A filter the
-  service silently drops returns a full list and a plausible result. Confirm
-  every filter by comparing a filtered count against an unfiltered one before
-  building on it. (Turn 005)
-* **A search endpoint is not a membership test.** `/tags?search=open-world`
-  returned `open-world-2` with 6 games while `open-world` with 9,338 existed.
-  Fuzzy ranking gives false negatives. Resolve by the call the app makes, pin the
-  result, check against the pin. (Turn 005)
-* **A documented shape is not a verified one.** `src/catalogue.js` was written
-  against a field list that could not be read anywhere, so it shipped with an
-  inspection script that printed the real response. It happened to be right. The
-  script is why that is known rather than assumed. (Turn 005)
-* **An assumption about someone else's ordering is still an assumption.** The
-  platform list was reversed on the belief that the catalogue sorted oldest
-  first. It sorts newest first, so the reverse buried the Nintendo Switch
-  thirteenth of thirteen. No test could fail: the code did exactly what it was
-  told. Only reading the output caught it. (Turn 009)
-* **Check the artifact before suspecting the source.** A pinned file regenerated
-  after a fix came out byte-identical to the version before it. The source was
-  correct and the file on disk was old. Two commands settled it — grep the
-  source, read the artifact — against an afternoon of looking for a bug that was
-  not there. This is the turn-001 stale-result rule wearing different clothes.
-  (Turn 009)
+They moved out of this file in turn 016, when it passed 250 lines against the 200
+the course asks for. Nothing was cut. The four that come up most often:
+
+* A gate can pass for the wrong reason — ask what a pass would look like if the
+  thing being tested had failed. (Turn 001, and again in 004 and 014.)
+* An ignored query parameter looks exactly like a working one. So does a filter
+  on a field that has been renamed. (Turns 005 and 016.)
+* A stale artifact looks exactly like a fresh one. (Turns 001 and 009.)
+* A threshold carried into a context where its reason does not hold is a bug with
+  a good name. (Turn 013.)
 
 ## Conventions
 
@@ -188,6 +156,12 @@ where the code they refer to is gone — the lesson outlived the design.
 descriptions come from a third party, go into a prompt, and nobody in this
 project chose them. Data, never instruction.
 * No offline check makes a network call. Checks assert against fixtures.
+* **A suite that has never been made to fail has not been tested.** Break the
+  thing a check guards and confirm that check — and only that check — goes red.
+  This has caught decoration three times.
+* **Probes are code and get the same suspicion as gates.** A probe that draws its
+  own conclusion can draw it for the wrong reason: one printed "trailers ARE
+  reachable" from an HTTP 200 with an empty list.
 
 \---
 

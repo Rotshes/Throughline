@@ -3,6 +3,13 @@
 Module 10, five parts. This is the primary work product. The code is generated
 from it; when the output is wrong, this gets fixed first and the code rebuilt.
 
+Version 3.0 — the catalogue changed from RAWG to IGDB, and two angles could not
+survive it. Adds criteria 16 and 17, pitfalls 22-27, and a fourth secret. See
+`docs/decisions/0006-igdb-replaces-rawg.md` and
+`docs/decisions/0007-prices-from-isthereanydeal.md`. Versions 2.0 and 2.1
+describe the same product on a different source; turns 005 to 014 remain accurate
+accounts of what existed at the time and are not edited to match this.
+
 Version 2.1 — adds tags as a third filter, criterion 4a, and pitfalls 18-19.
 See `docs/decisions/0004-tags-as-the-third-filter.md`.
 Version 2.0 — replaces the motif pipeline with filters and a persuasive
@@ -76,8 +83,11 @@ disagree about whether it was met.
 4. **Every recommended game carries the selected category** according to the
    catalogue's own classification. **A category is optional** — "any kind of
    game" is a request rather than a missing field, and this criterion does not
-   apply when none was chosen. Nineteen coarse genres (pitfall 9) mean insisting
-   on one excludes good answers for a distinction the user never made.
+   apply when none was chosen. Coarse genres (pitfall 9) mean insisting on one
+   excludes good answers for a distinction the user never made. The catalogue's
+   own classification is a **claim**, not a fact (pitfall 22): this criterion is
+   met when the catalogue files the game under that genre, and asserts nothing
+   about whether it belongs there.
 4a. **Where tags were selected, the catalogue says each recommended game carries
    at least one of them.** Read that wording exactly. Criteria 3 and 4 assert
    facts the catalogue holds; this asserts only that a label is present. Tags are
@@ -87,7 +97,14 @@ disagree about whether it was met.
 5. **Exactly three games, no duplicates.** If the filters leave fewer than three
    candidates, the app returns what exists and says how many it found. It never
    pads the list by relaxing a filter the user set.
-6. **The three angles are distinct and drawn from a fixed vocabulary.** The
+6. **The three angles are distinct and drawn from a fixed vocabulary of five.**
+   Two of the five are constrained — code can refuse them against catalogue data
+   — and three are judgements that code can only check for membership and
+   repetition. The vocabulary shrank from six in v2.x: `short-one` needed a
+   playtime this catalogue does not record and `hard-one` needed a difficulty
+   label it does not have, and an angle whose gate can never pass is the same
+   defect as a gate that can never fail. `data/angles.json` records both losses.
+   The
    prompt supplies the permitted angle labels; code checks that all three
    returned are members of that list and that no label repeats. See part 5,
    pitfall 6, for what this gate does and does not catch.
@@ -121,6 +138,21 @@ disagree about whether it was met.
 true. Neither can be checked by code. Criterion 15 records which of three a person
 picked, which measures persuasion. See pitfall 1 — under this design that gap is
 larger than it was in version 1.x, and it is stated rather than disguised.
+
+16. **A stored game id records which catalogue it came from, and an exclusion
+    across catalogues fails loudly.** Two catalogues issue integers that name
+    different games. Comparing them matches nothing, which is indistinguishable
+    from an empty library — three games come back, every gate passes, and the
+    page reports that nothing was excluded. `excludePlayed` throws rather than
+    returning an empty exclusion. Verifiable: a library row from another source
+    produces a failure, not a shortlist.
+
+17. **Any price shown names its source, its country and its date, and links
+    through unaltered.** Prices are regional and perishable, and the terms they
+    arrive under forbid modifying the data or stripping the affiliate tags from
+    the URLs. A row of prices with no country stated is wrong for most of the
+    people reading it. Verifiable: the rendered link is byte-identical to the one
+    the price service returned.
 
 ## Part 3 — Architectural guidance
 
@@ -284,7 +316,10 @@ Written once, permanently. Each is a failure expected in advance.
     Before putting a bound in a schema, ask what it protects.
 16. **The model will agree with a suggestion rather than correct it.** Do not ask
     it whether its own shortlist was good.
-17. **An external API has a quota and a bad day.** RAWG's free tier is bounded per
+17. **An external API has a quota and a bad day.** IGDB is bounded per *second*
+    rather than per month — four requests, which one shortlist can reach on its
+    own — and its token expires after about 57 days. IsThereAnyDeal is bounded at
+    a thousand per five minutes. The previous catalogue's free tier was bounded per
     month, and criterion 13 exists because a catalogue outage will otherwise
     surface as an empty page that looks like a bad filter.
 
@@ -321,3 +356,42 @@ Written once, permanently. Each is a failure expected in advance.
 Version 1.x's pitfall 3 — "Civ VI", "Civilization VI" and "Sid Meier's
 Civilization VI" being one game — disappears once nothing is matched by title.
 Everything is an id from the catalogue.
+
+22. **Genres are claims too, not only tags.** Version 2.x said "platforms are
+    facts, tags are claims" and let the category through as though it were a
+    fact. RAWG filed God of War as a souls-like; IGDB files Breath of the Wild
+    under `puzzle`. Criterion 4 proves the catalogue says so and nothing more.
+    No criterion, prompt or line of interface copy may claim more than that.
+
+23. **An empty result is a failure, not a state.** A row rendering `games: []`
+    shows the same words a working row would show if the source genuinely held
+    nothing. Forty records came back from the catalogue, all forty were discarded
+    by a threshold two lines later, and nothing said so for a week. When code
+    throws away everything it was handed, that is the most interesting thing that
+    happened in the request and it has to be reported.
+
+24. **A threshold carried into a context where its reason does not hold is a bug
+    with a good name.** The rating floor exists to keep the shortlist to games
+    the *model* can write about truthfully. The front page makes no model call
+    and a game released last month has had no time to collect ratings. Applied
+    there, the floor left one game in a row of forty. Before reusing a threshold,
+    restate the reason for it and check the reason still applies.
+
+25. **A query on a field that has been renamed returns nothing, and nothing looks
+    exactly like absence.** `external_games.category` still exists and still
+    answers — with 753 rows where `external_game_source` answers 175,517. Small
+    enough to read as "these games have no Steam release" rather than "this
+    filter is wrong". Read the field names off a real record before filtering on
+    them. This is pitfall 20 wearing different clothes and it is the fourth
+    appearance of that family.
+
+26. **Sorting by an extreme surfaces things that are not the product.** Ranking
+    deals by discount returned two giveaways, a demo and six training-course
+    bundles — AWS, Kali Linux, cybersecurity. The biggest discount on the
+    internet is rarely on a game. Where a row is built by sorting on a single
+    dimension, look at the top of it before shipping it.
+
+27. **A mutation test is code and fails silently like any other.** An edit that
+    did not apply produces a green suite and reads exactly like a check that
+    cannot fail — which is the thing the mutation was written to detect. Confirm
+    the source actually changed before trusting the result.
