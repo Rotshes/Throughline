@@ -212,8 +212,13 @@ against the same wrong name agrees with the code. Already added to
 
 **"It parsed" is not "it works", and a permissive tool will tell you so by saying
 nothing.** esbuild accepting broken CSS is not a bug in esbuild; it is the wrong
-question asked of the right tool. Proposed for `docs/failures.md` as entry 24 —
-**awaiting the user's go-ahead, since `docs/` outside `docs/turns/` is his.**
+question asked of the right tool. Added to `docs/failures.md` as entry 24, with
+the user's go-ahead given after the turn's code was already pushed.
+
+`CLAUDE.md` was corrected at the same time: it claimed twenty-one failures when
+there were twenty-four, and credited turn 001's rule to three turns when it has
+now fired five times. **A stated count is a claim that goes stale silently** —
+the same shape as everything else in that file.
 
 **A file is code if breaking it changes behaviour.** The stylesheet had no check
 suite for eighteen turns, and the one class of bug it is most prone to — silent

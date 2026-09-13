@@ -133,15 +133,17 @@ why I chose it. Ask.
 
 ## Failures seen before
 
-Twenty-one of them, in `docs/failures.md`. **Read it before writing code.**
+Twenty-four of them, in `docs/failures.md`. **Read it before writing code.**
 
 They moved out of this file in turn 016, when it passed 250 lines against the 200
 the course asks for. Nothing was cut. The four that come up most often:
 
 * A gate can pass for the wrong reason — ask what a pass would look like if the
-  thing being tested had failed. (Turn 001, and again in 004 and 014.)
+  thing being tested had failed. Five times now: 001, 004, 014, 017, 018. It is
+  the most expensive line in this project and writing it down has never once
+  been enough to prevent the next one.
 * An ignored query parameter looks exactly like a working one. So does a filter
-  on a field that has been renamed. (Turns 005 and 016.)
+  on a field that has been renamed. (Turns 005, 016 and 018 — three renames.)
 * A stale artifact looks exactly like a fresh one. (Turns 001 and 009.)
 * A threshold carried into a context where its reason does not hold is a bug with
   a good name. (Turn 013.)

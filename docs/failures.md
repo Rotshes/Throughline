@@ -113,3 +113,15 @@ cut; it moved. This is where most of the value in that file was.
   agrees with the code**, which is why 21 offline checks covered this file and
   none of them caught it. Third rename hit in this project, after `game_type` and
   `external_game_source`. (Turn 018)
+* **"It parsed" is not "it works", and a permissive tool says nothing.** A comment
+  closed early in `styles.css` left five lines of English loose inside a
+  declaration block, and the browser discarded everything from the stray text to
+  the end of the rule — so `animation:` never applied, the tab simply sat there,
+  and every other declaration in the rule survived. It was verified with
+  `esbuild styles.css --outfile=/dev/null`, which exits 0, prints nothing, and
+  emits the wreckage as one mangled declaration. esbuild was not wrong; it was
+  never asked the question that mattered. "Does this parse" and "is the
+  declaration still inside the rule" are different claims, and only the second
+  one was the claim being made. Fifth appearance of turn 001's rule, and the
+  first in a file this project had not been treating as code — `scripts/check-css.js`
+  exists because a stylesheet fails silently by construction. (Turn 018)
