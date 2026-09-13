@@ -1,0 +1,32 @@
+{
+  "$comment": "The five states a game can be in, borrowed from the shape MyAnimeList uses for anime. Pinned here rather than hard-coded because both the function and the browser need them and nothing under web/ may import from src/. The order is the order they appear in the interface.",
+  "$exclusion": "Every status excludes. A game in the library is never recommended again, whatever state it is in — criterion 8. Recording the status is for the person reading their own library, not for the recommender, which only asks whether the id is present.",
+  "statuses": [
+    {
+      "id": "playing",
+      "label": "Playing",
+      "meaning": "In progress right now."
+    },
+    {
+      "id": "plan",
+      "label": "Plan to play",
+      "meaning": "Decided on, not started.",
+      "default": true
+    },
+    {
+      "id": "on_hold",
+      "label": "On hold",
+      "meaning": "Started, set aside, not abandoned."
+    },
+    {
+      "id": "dropped",
+      "label": "Dropped",
+      "meaning": "Started and given up on."
+    },
+    {
+      "id": "completed",
+      "label": "Completed",
+      "meaning": "Finished."
+    }
+  ]
+}
