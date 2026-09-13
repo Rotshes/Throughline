@@ -155,7 +155,7 @@ export default function GameDialog({ game, status, busy, onAdd, onClose }) {
 
           {full?.synopsis && (
             <div className="synopsis">
-              <p className="source">What the catalogue says</p>
+              <p className="source">Summary from IGDB</p>
               <p>{full.synopsis}</p>
             </div>
           )}
@@ -193,15 +193,19 @@ export default function GameDialog({ game, status, busy, onAdd, onClose }) {
               </button>
             )}
 
-            {/* Attribution, and where to find what this app does not show. */}
-            {(full?.slug ?? game.slug) && (
-              <a
-                className="sheet-link"
-                href={`https://www.igdb.com/games/${full?.slug ?? game.slug}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                On IGDB
+            {/* The catalogue's own page for this game used to be linked here.
+                Removed at the user's request: it sent people out of the app to
+                a site that does the same job better, which is a strange thing
+                for a product to do. The credit for the data stays in the footer
+                as text — see the note there. */}
+            {/* "Player reviews", not "reviews". IGDB serves no review text and
+                no link to the critics behind its score — ten endpoints and a
+                twenty-six-entry website vocabulary, none of them review-shaped.
+                A Steam page carries reviews written by people who bought it,
+                which is a different and smaller thing, and the label says so. */}
+            {full?.reviews && (
+              <a className="sheet-link" href={full.reviews} target="_blank" rel="noreferrer">
+                Player reviews on Steam
               </a>
             )}
             {full?.website && (

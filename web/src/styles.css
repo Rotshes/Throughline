@@ -26,6 +26,14 @@
   --accent:      #4c5ce0;
   --accent-ink:  #ffffff;
   --accent-soft: #eceefc;
+  /* The pulsing ring on the find tab. It has to be read against --paper, not
+     against the pill it grows out of, which is why it is not --accent-soft:
+     #eceefc on #f7f7fa is a difference of about four values per channel and is
+     invisible in motion. That was the bug. */
+  --accent-ring: rgba(76, 92, 224, 0.45);
+  /* The pill's colour at the top of a pulse — a step up from --accent-soft,
+     so the tab itself brightens rather than only the ring around it. */
+  --accent-lift: #dbe0fa;
   --warn:        #b03a28;
   --warn-soft:   #fdf0ed;
 
@@ -52,6 +60,8 @@
     --accent:      #8b96f5;
     --accent-ink:  #10111a;
     --accent-soft: #1e2136;
+    --accent-ring: rgba(139, 150, 245, 0.48);
+    --accent-lift: #2b3052;
     --warn:        #e8917a;
     --warn-soft:   #2a1a17;
 
@@ -90,7 +100,10 @@ main {
 
 /* ---------- masthead ---------- */
 
-.masthead { margin-bottom: 36px; }
+/* Tighter than it was. The per-view tagline that used to sit under the logo is
+   gone — the tabs say which page you are on, and three sentences explaining that
+   was three sentences nobody read. */
+.masthead { margin-bottom: 28px; }
 
 .masthead h1 {
   margin: 0 0 8px;
@@ -656,6 +669,121 @@ footer a { color: var(--accent); text-decoration-thickness: 1px; text-underline-
 
 .tab.on .count { background: var(--accent); color: var(--accent-ink); }
 
+/* ---------- the one tab that is an action ---------- */
+
+/* Home and the library are places. "Find a game to play" is the product, and on
+   first load nothing distinguished it from the two tabs either side of it.
+
+   Two things carry the highlight, and they do different jobs:
+
+     the TINT is the persistent one — accent text on an accent-soft pill. It
+     survives whether or not anything is animating, so the tab still reads as
+     the primary action under prefers-reduced-motion, in a screenshot, and for
+     anyone who never sees a frame of the pulse.
+
+     the PULSE is the eye-catch — a slow ring breathing outward from the pill,
+     three times and then done. Three is the point: it is enough to be noticed
+     on arrival and it stops before it becomes something to ignore. An
+     indefinitely pulsing control is a distraction competing with the page it
+     is trying to get you to leave.
+
+   Note the class is applied only while this is NOT the current tab, in App.jsx.
+   A control decorated to say "go here" while you are already here is noise. */
+.tab.primary {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: transparent;
+  font-weight: 600;
+  /* The ring is drawn by box-shadow so it costs no extra element and no layout:
+     it expands outside the pill without moving the tabs beside it. The swell is
+     a transform for the same reason — neither one reflows the row.
+
+     `infinite`, where the first version ran three times and stopped. Three
+     passes finished about eight seconds after load, so anybody who looked at
+     the page a moment later saw a static pill and correctly reported that
+     nothing was animating. Stopping it was the right instinct for a nag and the
+     wrong one for a signpost: this has to still be there when somebody finishes
+     reading the front page, which is the moment they need it. It is paused
+     instead when they are already on the page it points at — below.
+
+     2.9s was a heartbeat. 7s is a signpost. The beat itself did not get slower —
+     see the keyframes, where the rest moved to the front of the cycle and grew
+     to five seconds while the pulse kept its ~2s shape. Slowing the pulse down
+     instead would have made it syrupy and no less frequent, which is the
+     opposite of what was asked for. */
+  animation: tab-pulse 7s var(--ease) infinite;
+}
+
+/* PAUSED ON THE FIND PAGE.
+
+   Both classes are on the element now and this rule restores the ordinary
+   "current tab" look, so the pill does not keep advertising the page you are
+   reading. `animation: none` rather than `animation-play-state: paused`: paused
+   would freeze it mid-pulse, holding whatever ring happened to be on screen at
+   the moment you clicked. */
+.tab.on.primary {
+  color: var(--ink);
+  background: var(--card);
+  border-color: var(--line);
+  box-shadow: var(--shadow);
+  transform: none;
+  animation: none;
+}
+
+/* :not(.on) matters. Without it this rule and .tab.on.primary have identical
+   specificity, source order decides, and hovering the tab you are already on
+   would repaint it as the pill it stops being on that page. */
+.tab.primary:not(.on):hover {
+  color: var(--accent);
+  background: var(--accent-lift);
+  border-color: var(--accent);
+  /* Hovering is the answer the pulse was asking for, so it stops asking. */
+  animation: none;
+}
+
+/* Keyboard focus is not decoration and never animates away. */
+.tab.primary:not(.on):focus-visible { animation: none; }
+
+@keyframes tab-pulse {
+  /* Read the percentages against the 7s duration, not against each other.
+
+       0% - 72%    five seconds of nothing. The tab sits as a plain tinted pill.
+       72% - 100%  about two seconds of pulse.
+
+     The rest is at the FRONT of the cycle rather than the end so that the first
+     thing a page load shows is the quiet state, and the pulse arrives a few
+     seconds later — after somebody has had time to look at the page it is
+     inviting them to leave.
+
+     Three things move together inside that two seconds: the ring blooms outward
+     and fades, the pill swells slightly, and its background brightens. The ring
+     alone was too easy to miss in peripheral vision; the swell is what catches
+     the eye when you are not looking directly at it. */
+  0%, 72% {
+    box-shadow: 0 0 0 0 var(--accent-ring);
+    background-color: var(--accent-soft);
+    transform: scale(1);
+  }
+  84% {
+    background-color: var(--accent-lift);
+    transform: scale(1.055);
+  }
+  93% {
+    box-shadow: 0 0 0 13px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    background-color: var(--accent-soft);
+    transform: scale(1);
+  }
+}
+
+/* The global reduced-motion rule collapses the animation to a single 0.001ms
+   pass, which lands on the final frame — transparent ring, no swell, base
+   colour. The tint underneath is a plain background and is untouched, so the
+   tab still reads as the primary action with no motion at all. That is the
+   whole reason the tint is set on .tab.primary and not inside the keyframes. */
+
 /* ---------- adding from a card ---------- */
 
 .library-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -774,7 +902,10 @@ main.wide { max-width: 1040px; }
 
 .card-art {
   position: relative;
-  flex: 0 0 190px;
+  /* Sized for a portrait cover rather than a landscape still. 132 wide against
+     a card body that sets the height gives roughly 3:4 without pinning an
+     aspect ratio on a panel that has to stretch to the card. */
+  flex: 0 0 132px;
   align-self: stretch;
   background: var(--sunk);
 }
@@ -914,23 +1045,28 @@ main.wide { max-width: 1040px; }
 /* Small — more on screen at once. The added-on date goes first: it is the
    least useful line on the card and the one nobody scans for. */
 .shelf.size-s { grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); }
-.shelf.size-s .card-art { flex: 0 0 116px; }
-.shelf.size-s .card-art img, .shelf.size-s .card-noart { min-height: 96px; }
+.shelf.size-s .card-art { flex: 0 0 104px; }
+.shelf.size-s .card-art img, .shelf.size-s .card-noart { min-height: 139px; }
 .shelf.size-s .card-body { padding: 12px 14px; gap: 3px; }
 .shelf.size-s .card-body h3 { font-size: 15px; }
 .shelf.size-s .card-body h3 .year { font-size: 13.5px; }
 .shelf.size-s .card-added { display: none; }
 .shelf.size-s .card-actions { padding-top: 9px; }
 
-/* Large — the art goes across the top at full width, so a screenshot is big
-   enough to actually recognise a game from. */
-.shelf.size-l { grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); }
+/* Large — box art across the top, and narrower columns to suit it.
+   The card used to be 430px wide with a 16:9 screenshot. Box art is portrait,
+   so a card that wide would carry an image 570px tall; the column narrows
+   instead of the picture being cropped back into a letterbox. This is the
+   shelf shape a games library actually has. */
+.shelf.size-l { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 .shelf.size-l .card { flex-direction: column; }
 .shelf.size-l .card-art { flex: 0 0 auto; width: 100%; }
 
 .shelf.size-l .card-art img,
 .shelf.size-l .card-noart {
-  aspect-ratio: 16 / 9;
+  /* IGDB covers are 264x374. 3/4 is close enough that nothing is cropped
+     noticeably, and it keeps the grid on a round number. */
+  aspect-ratio: 3 / 4;
   height: auto;
   min-height: 0;
 }
@@ -945,7 +1081,7 @@ main.wide { max-width: 1040px; }
   .library-head { align-items: flex-start; }
   .shelf.size-s, .shelf.size-m, .shelf.size-l { grid-template-columns: 1fr; }
   .shelf.size-s .card, .shelf.size-m .card { flex-direction: row; }
-  .shelf.size-s .card-art, .shelf.size-m .card-art { flex: 0 0 120px; }
+  .shelf.size-s .card-art, .shelf.size-m .card-art { flex: 0 0 104px; }
   .shelf.size-s .card-art img, .shelf.size-m .card-art img { aspect-ratio: auto; height: 100%; }
 }
 
@@ -1023,7 +1159,10 @@ main.wide { max-width: 1040px; }
   scrollbar-width: thin;
 }
 
-.rail-item { flex: 0 0 186px; display: flex; flex-direction: column; gap: 5px; }
+/* Narrower than it was. The art went from a 16:9 still to portrait box art, so
+   a 186px card would carry an image 263px tall and the row would become a wall.
+   A shelf of covers is made of narrow columns. */
+.rail-item { flex: 0 0 148px; display: flex; flex-direction: column; gap: 5px; }
 
 .rail-art { position: relative; }
 
@@ -1031,7 +1170,9 @@ main.wide { max-width: 1040px; }
 .rail-noart {
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  /* IGDB covers are 264x374. The exact ratio rather than a tidy 3/4, because
+     3/4 crops about six percent off a picture that was composed to fit. */
+  aspect-ratio: 264 / 374;
   object-fit: cover;
   border-radius: var(--radius-sm);
   background: var(--sunk);
@@ -1053,12 +1194,12 @@ main.wide { max-width: 1040px; }
 
 .rail-title {
   margin: 4px 0 0;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   line-height: 1.35;
 }
 
-.rail-facts { margin: 0; font-size: 12px; color: var(--quiet); }
+.rail-facts { margin: 0; font-size: 11.5px; color: var(--quiet); line-height: 1.45; }
 
 .rail-add {
   margin-top: 4px;
@@ -1348,3 +1489,614 @@ main.wide { max-width: 1040px; }
 
 /* The rail keeps `cover`: a card is small, letterboxing wastes most of it, and
    the picture there is a screenshot in every case the catalogue can supply one. */
+
+/* ---------- the logo ----------
+
+   Two colour sets rather than one. A gradient tuned for a white page is muddy
+   on a dark one and a gradient tuned for dark is unreadable on white, and this
+   app renders in both. */
+
+:root {
+  --logo-1: #0891b2;
+  --logo-2: #4c5ce0;
+  --logo-3: #7c3aed;
+  --logo-glow: transparent;
+  /* The band that sweeps across the wordmark. Pale rather than white on a light
+     page: a white shine on near-white gradient text reads as the letters
+     briefly vanishing. */
+  --logo-shine: rgba(255, 255, 255, 0.85);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --logo-1: #22d3ee;
+    --logo-2: #7d8cff;
+    --logo-3: #c084fc;
+    /* Only in the dark, and barely. A glow on a white page reads as a printing
+       fault; in the dark it is what makes the wordmark feel lit rather than
+       painted. */
+    --logo-glow: rgba(125, 140, 255, 0.35);
+    --logo-shine: #ffffff;
+  }
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin: 0;
+  line-height: 1;
+}
+
+.logo-words { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+/* Where the tagline used to be. Smaller, quieter, and part of the lockup rather
+   than a sentence explaining the page — the tabs already do that. */
+.logo-tail {
+  font-size: clamp(12px, 2.4vw, 14px);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--quiet);
+}
+
+.logo-mark {
+  width: clamp(30px, 6.5vw, 38px);
+  height: clamp(30px, 6.5vw, 38px);
+  flex: 0 0 auto;
+  /* The drawn line reads as a route through three points. Rounding every join
+     keeps it feeling drawn rather than plotted. */
+  overflow: visible;
+}
+
+.logo-word {
+  font-size: clamp(30px, 7vw, 40px);
+  font-weight: 800;
+  /* Tighter than the body text on purpose. A wordmark is one object, and
+     default tracking at this weight makes it read as a sentence. */
+  letter-spacing: -0.045em;
+
+  /* TWO backgrounds, both clipped to the letters. The lower one is the palette
+     and never moves; the upper one is a narrow transparent-to-light-to-
+     transparent band that sweeps across and then waits off-screen.
+
+     Animating the palette itself would have been one line fewer and would make
+     the colours crawl, which is a different and worse effect — the logo would
+     never be the same picture twice. */
+  background-image:
+    linear-gradient(100deg, transparent 38%, var(--logo-shine) 50%, transparent 62%),
+    linear-gradient(96deg, var(--logo-1), var(--logo-2) 48%, var(--logo-3));
+  background-size: 250% 100%, 100% 100%;
+  background-position: 160% 0, 0 0;
+  background-repeat: no-repeat;
+
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* The fallback matters: where background-clip:text is unsupported the text
+     would be invisible rather than merely unstyled. */
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 26px var(--logo-glow);
+
+  animation: logo-shine 7s ease-in-out infinite;
+}
+
+/* The sweep occupies the first half and the band rests off the left edge for
+   the rest. Both ends of the cycle have it out of frame, so the loop point is
+   invisible — a shine that snapped back across the letters would be a strobe.
+
+   Under prefers-reduced-motion the global rule collapses this to its final
+   frame, which is the band parked off-screen: the resting logo, unanimated. */
+@keyframes logo-shine {
+  0%   { background-position: 160% 0, 0 0; }
+  45%  { background-position: -60% 0, 0 0; }
+  100% { background-position: -60% 0, 0 0; }
+}
+
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .logo-word {
+    color: var(--logo-2);
+    -webkit-text-fill-color: var(--logo-2);
+    background-image: none;
+    animation: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .logo { gap: 9px; }
+}
+
+/* ---------- the drifting rails ----------
+
+   A rail that moves on its own has to stop being scrollable by the browser's
+   own snapping, or the drift and the snap argue. The scrollbar goes because a
+   row that moves by itself with a bar sliding along under it looks like
+   something is loading. */
+
+.rail.drifting {
+  scrollbar-width: none;
+  scroll-snap-type: none;
+  scroll-behavior: auto;   /* smooth scrolling fights a per-frame scrollLeft */
+}
+
+.rail.drifting::-webkit-scrollbar { display: none; }
+
+/* A fade on the right edge was here and has been taken out again. Positioning
+   it needed a hard-coded height guessed from the card size — correct at one
+   font size and wrong at every other, and it would have sat over the
+   suggestions row too, which has different-shaped cards. A decoration placed by
+   a magic number is worse than no decoration: it looks deliberate while being
+   wrong. If it comes back it measures the rail rather than assuming it. */
+
+/* ---------- prices ----------
+
+   The current price leads, the old one is struck through beside it, and the cut
+   is a chip. Three numbers in a row that has to stay readable at 186px wide, so
+   the discount does the shouting and the rest stays quiet. */
+
+.rail-price {
+  margin: 2px 0 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12.5px;
+}
+
+.price-now { font-weight: 700; color: var(--ink); }
+
+.price-was {
+  color: var(--quiet);
+  text-decoration: line-through;
+  font-size: 12px;
+}
+
+.price-cut {
+  margin-left: auto;
+  padding: 1px 7px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.rail-buy {
+  margin-top: 6px;
+  align-self: flex-start;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.rail-buy:hover { text-decoration: underline; }
+
+/* ---------- the deals list ----------
+
+   A column rather than a rail. Twelve prices side by side means holding
+   "$13.50, was $59.99" in your head to compare it with the next one; stacked,
+   the eye does that work. It is also why nothing here drifts — browsing and
+   choosing are different tasks and only one of them tolerates movement. */
+
+.deals {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--card);
+}
+
+.deal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 0 14px 0 0;
+  border-top: 1px solid var(--line-soft);
+  transition: background 0.14s var(--ease);
+}
+
+.deal:first-child { border-top: 0; }
+.deal:hover { background: var(--sunk); }
+
+/* The whole left side opens the game. Everything a button brings visually has
+   to be taken back off it. */
+.deal-open {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.deal-open:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.deal-art {
+  display: block;
+  width: 52px;
+  flex: 0 0 52px;
+  aspect-ratio: 264 / 374;
+  object-fit: cover;
+  background: var(--sunk);
+}
+
+.deal-noart { background: var(--sunk); }
+
+.deal-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.deal-title {
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  /* One line. A two-line title pushes the row taller than its cover and the
+     list stops scanning evenly, which is the only thing a list is for. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deal-sub {
+  font-size: 11.5px;
+  color: var(--quiet);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deal-money {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.deal-amounts { display: flex; align-items: baseline; gap: 7px; }
+
+.deal-shop {
+  font-size: 11.5px;
+  color: var(--quiet);
+  /* Fixed width so the shop names line up down the column instead of the prices
+     jittering left and right as each name changes length. */
+  min-width: 96px;
+}
+
+.deal-actions { display: flex; align-items: center; gap: 12px; }
+
+.deal-buy {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.deal-buy:hover { text-decoration: underline; }
+
+.deal-in { font-size: 12.5px; font-weight: 600; color: var(--accent); }
+.deal .rail-add { margin-top: 0; }
+
+/* Narrow: the price block drops under the title rather than squeezing three
+   columns into a phone. */
+@media (max-width: 720px) {
+  .deal {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 10px 12px 10px 0;
+    gap: 8px 12px;
+  }
+  .deal-money { grid-column: 1 / -1; padding-left: 65px; }
+  .deal-shop { min-width: 0; }
+}
+
+/* The refresh bar above the deals list. */
+
+.deals-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.deals-refresh {
+  padding: 7px 15px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.16s var(--ease), color 0.16s var(--ease);
+}
+
+.deals-refresh:hover:not(:disabled) { border-color: var(--accent); color: var(--ink); }
+.deals-refresh:disabled { opacity: 0.5; cursor: default; }
+
+.deals-note { font-size: 12.5px; color: var(--quiet); }
+
+/* The search beside the refresh button. */
+
+.deals-search { display: flex; gap: 8px; }
+
+.deals-search input {
+  width: 190px;
+  padding: 7px 13px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.deals-search input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.deals-search input::placeholder { color: var(--quiet); }
+
+.deals-search button,
+.deals-clear {
+  padding: 7px 15px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.16s var(--ease), color 0.16s var(--ease);
+}
+
+.deals-search button:hover:not(:disabled),
+.deals-clear:hover { border-color: var(--accent); color: var(--ink); }
+.deals-search button:disabled { opacity: 0.5; cursor: default; }
+
+/* A search can return a game that is not on sale, which the browse list never
+   does. It needs to say so rather than showing an empty space where every other
+   row has a discount. */
+.price-flat {
+  padding: 1px 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--quiet);
+  background: var(--sunk);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+@media (max-width: 560px) {
+  .deals-search { width: 100%; }
+  .deals-search input { flex: 1; width: auto; }
+}
+
+/* ---------- showcases ----------
+
+   Wide logos rather than tall covers, because that is the shape the art comes
+   in — an event logo is a banner. This rail does not drift: the other two move
+   because you are scanning pictures, and a row of names sliding sideways is a
+   row nobody finishes reading. */
+
+.rail.events { gap: 16px; }
+
+.event-item { flex: 0 0 232px; display: flex; }
+
+.event-open {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  transition: transform 0.18s var(--ease);
+}
+
+.event-open:hover { transform: translateY(-2px); }
+.event-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.event-logo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--sunk);
+  transition: filter 0.18s var(--ease);
+}
+
+.event-open:hover .event-logo { filter: brightness(1.06); }
+
+.event-name {
+  margin-top: 5px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  /* Two lines at most. Showcase names run long — "PLAYISM Game Show: TGS 2026
+     Preview" — and a card that grows to fit breaks the row's alignment. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.event-sub { font-size: 11.5px; color: var(--quiet); }
+
+/* The games inside an opened showcase reuse the rail cards, at a size that fits
+   a dialog rather than a page. */
+.rail.event-games { padding-top: 4px; }
+.rail.event-games .rail-item { flex: 0 0 122px; }
+.rail.event-games .rail-title { font-size: 12.5px; }
+
+@media (max-width: 560px) {
+  .event-item { flex: 0 0 190px; }
+}
+
+/* ---------- recently suggested ----------
+
+   Moved here from the front page in turn 018. Among rows about what is new,
+   what reviewed well and what is cheap, a record of this app's own behaviour
+   read as a fourth catalogue listing. Under the find form it answers "what does
+   this thing actually give people" before you have typed anything.
+
+   Banners rather than cards: a cover beside a title, laid out to be read down
+   the page rather than scanned across it. These are not for browsing — nothing
+   here is clickable, because clicking it would start a different journey from
+   the one the form above is for. */
+
+.suggested {
+  margin-top: 34px;
+  padding-top: 26px;
+  border-top: 1px solid var(--line);
+}
+
+.suggested h2 {
+  margin: 0 0 5px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.banners {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(216px, 1fr));
+  gap: 9px;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 7px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.banner-art {
+  display: block;
+  flex: 0 0 38px;
+  width: 38px;
+  aspect-ratio: 264 / 374;
+  object-fit: cover;
+  border-radius: 5px;
+  background: var(--sunk);
+}
+
+.banner-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+
+.banner-angle {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.banner-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  /* One line. These are a strip under a form, and a banner that grows to fit a
+     long title breaks the grid it sits in. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- discount bands ----------
+
+   Four colours, hottest at the top. The colour is reinforcement and never the
+   signal: the number sits inside the chip, so the scale still reads for the
+   roughly one man in twelve who cannot separate the reds from the oranges.
+
+   Light and dark get different values rather than one set at different opacity.
+   A red tuned for white paper goes muddy on a dark ground, and a red tuned for
+   dark glows on white. */
+
+:root {
+  --cut-hot:   #d6323a;
+  --cut-high:  #c25a08;
+  --cut-mid:   #4c5ce0;
+  --cut-low:   #5b6470;
+  --cut-ink:   #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cut-hot:   #f2555d;
+    --cut-high:  #f78a3c;
+    --cut-mid:   #7d8cff;
+    --cut-low:   #8d97a6;
+    /* Dark text on these brighter chips, because white on a light-orange chip
+       is the one combination in this set that fails to be readable. */
+    --cut-ink:   #12131a;
+  }
+}
+
+.price-cut { background: var(--cut-mid); color: var(--cut-ink); }
+
+.cut-hot  { background: var(--cut-hot); }
+.cut-high { background: var(--cut-high); }
+.cut-mid  { background: var(--cut-mid); }
+
+/* The quietest band is outlined rather than filled. A tenth off is not news, and
+   giving it the same weight as three-quarters off would flatten the scale that
+   the other three exist to make. */
+.cut-low {
+  background: transparent;
+  color: var(--cut-low);
+  border: 1px solid var(--cut-low);
+}
+
+/* ---------- aligning the bottom of a rail card ----------
+
+   The buttons were landing wherever the text above them stopped: "Palworld" is
+   one line, "Resonance: A Plague Tale Legacy" is two, and a two-line platform
+   list pushes it further still. Every card was a different height inside and the
+   row read as ragged.
+
+   Two rules fix it, and both are needed. Pushing the button down with `auto`
+   only works if the cards are the same height to begin with — which they are,
+   because a flex row stretches its items — and clamping the text stops the
+   tallest card dragging every other one down with it. */
+
+.rail-item > .rail-open { flex: 1 1 auto; }
+
+.rail-add,
+.rail-in {
+  /* Takes whatever vertical space is left, so every button in the row sits on
+     the same line however the titles above them wrapped. */
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.rail-title {
+  /* Two lines at most. Without this one long title makes every card in the row
+     as tall as it is, and a rail of mostly-empty cards is a worse problem than
+     a truncated name. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.rail-facts {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

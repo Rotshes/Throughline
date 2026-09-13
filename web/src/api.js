@@ -52,6 +52,72 @@ export async function fetchHome() {
 }
 
 /**
+ * A different page of deals.
+ *
+ * Its own endpoint rather than re-fetching the front page: the page is cached
+ * for half an hour and pressing refresh should not throw that away for
+ * everyone, and the other two rows have no reason to reload because somebody
+ * wanted different prices.
+ */
+export async function fetchDeals(window) {
+  try {
+    const res = await fetch(`/api/deals?window=${encodeURIComponent(window)}`);
+    const raw = await res.text();
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return { ok: false, reason: `HTTP ${res.status}: ${raw.slice(0, 300)}`, games: [] };
+    }
+  } catch (e) {
+    return { ok: false, reason: e.message, games: [] };
+  }
+}
+
+/**
+ * Games this app has recently suggested. Never fails loudly — the strip sits
+ * above the find form and an outage must not cost anybody the form.
+ */
+export async function fetchSuggested() {
+  try {
+    const res = await fetch("/api/suggested");
+    const body = await res.json();
+    return Array.isArray(body?.games) ? body.games : [];
+  } catch {
+    return [];
+  }
+}
+
+/** One showcase, and the games announced in it. */
+export async function fetchEventGames(id) {
+  try {
+    const res = await fetch(`/api/event?id=${encodeURIComponent(id)}`);
+    const raw = await res.text();
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return { ok: false, reason: `HTTP ${res.status}: ${raw.slice(0, 300)}`, games: [] };
+    }
+  } catch (e) {
+    return { ok: false, reason: e.message, games: [] };
+  }
+}
+
+/** What one game costs, discounted or not. */
+export async function searchDeal(query) {
+  try {
+    const res = await fetch(`/api/deals?q=${encodeURIComponent(query)}`);
+    const raw = await res.text();
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return { ok: false, reason: `HTTP ${res.status}: ${raw.slice(0, 300)}`, games: [] };
+    }
+  } catch (e) {
+    return { ok: false, reason: e.message, games: [] };
+  }
+}
+
+/**
  * One game, in full. Asked for only when somebody opens a card — never for a
  * whole row, because each open costs two catalogue requests.
  */

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  requestShortlist, recordClick,
+  requestShortlist, recordClick, fetchSuggested,
   fetchLibrary, saveToLibrary, removeFromLibrary,
 } from "./api.js";
 import LibraryView from "./Library.jsx";
@@ -57,6 +57,9 @@ export default function App() {
   // can draw a title and a picture straight away instead of showing an empty box
   // while the full record is fetched.
   const [opened, setOpened] = useState(null);
+  // Games this app has already put in front of somebody. Fetched once and never
+  // refetched — it is a flourish above the form, not live data.
+  const [suggested, setSuggested] = useState([]);
 
   const reloadLibrary = useCallback(async () => {
     setLibrary(await fetchLibrary());
@@ -66,6 +69,12 @@ export default function App() {
   // shortlist needs to know what is already on the list, so it can say so on
   // the card instead of offering to add something twice.
   useEffect(() => { reloadLibrary(); }, [reloadLibrary]);
+
+  useEffect(() => {
+    let alive = true;
+    fetchSuggested().then(g => { if (alive) setSuggested(g); });
+    return () => { alive = false; };
+  }, []);
 
   const inLibrary = useMemo(
     () => new Map((library.entries ?? []).map(e => [e.game_id, e.status])),
@@ -79,7 +88,12 @@ export default function App() {
       status,
       title: pick.title,
       slug: pick.slug ?? null,
-      image: pick.image ?? null,
+      // The COVER, not the display image. Everywhere else in this app the frame
+      // is 16:9 and wants a screenshot; the library is a shelf, and a shelf
+      // wants box art. The column holds whatever that view should show, so this
+      // needs no second column and no migration — but it does mean a row added
+      // before this change still holds the screenshot it was given.
+      image: pick.cover ?? pick.image ?? null,
       released: pick.released ?? null,
       platforms: pick.platforms ?? [],
     });
@@ -198,14 +212,39 @@ export default function App() {
     // width than the shortlist, which is set to a reading measure on purpose.
     <main className={view === "find" ? undefined : "wide"}>
       <header className="masthead">
-        <h1>Throughline</h1>
-        <p className="tagline">
-          {view === "library"
-            ? "Games you have put on the list. Nothing here will be recommended again."
-            : view === "home"
-              ? "What is out, what reviewed well, and what this app has been suggesting. Every row says where it came from."
-              : "Say what kind of game you want and what you can play it on. Three specific answers, and the case for each."}
-        </p>
+        <h1 className="logo">
+          {/* A single line threading through three points, which is what this
+              app does: one route drawn through three games. A controller icon
+              would say "games" and nothing else — this says which game app.
+              Inline rather than an image file so it inherits the theme's
+              colours and stays sharp at any size. */}
+          <svg className="logo-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+            <defs>
+              <linearGradient id="tl-grad" x1="0" y1="1" x2="1" y2="0">
+                <stop offset="0%" stopColor="var(--logo-1)" />
+                <stop offset="52%" stopColor="var(--logo-2)" />
+                <stop offset="100%" stopColor="var(--logo-3)" />
+              </linearGradient>
+            </defs>
+            <rect x="1" y="1" width="30" height="30" rx="9.5" fill="url(#tl-grad)" opacity="0.13" />
+            <rect x="1" y="1" width="30" height="30" rx="9.5" fill="none"
+                  stroke="url(#tl-grad)" strokeWidth="1.4" opacity="0.45" />
+            <path d="M6.5 22.5 C 11 22.5, 11.5 9.5, 16 9.5 S 21 22.5, 25.5 22.5"
+                  fill="none" stroke="url(#tl-grad)" strokeWidth="2.4"
+                  strokeLinecap="round" />
+            <circle cx="6.5" cy="22.5" r="2.7" fill="url(#tl-grad)" />
+            <circle cx="16" cy="9.5" r="2.7" fill="url(#tl-grad)" />
+            <circle cx="25.5" cy="22.5" r="2.7" fill="url(#tl-grad)" />
+          </svg>
+          <span className="logo-words">
+            <span className="logo-word">Throughline</span>
+            {/* Takes the place the per-view tagline used to occupy. A logo
+                lockup says what the product is once, rather than three
+                sentences explaining what each tab does — which is a thing the
+                tabs already say. */}
+            <span className="logo-tail">Your Gaming Companion</span>
+          </span>
+        </h1>
         <nav className="tabs">
           <button
             type="button"
@@ -215,13 +254,22 @@ export default function App() {
           >
             Home
           </button>
+          {/* The only tab that is an action rather than a place. Home and the
+              library are things you look at; this is the thing the app does, and
+              it is the one route to the pipeline the whole project is about.
+
+              `primary` is always on the element, and `on` is added on top of it
+              when this is the current view. The pause lives in CSS as
+              `.tab.on.primary`, not here as a missing class — an animation
+              asking you to go where you already are is nagging, and a rule
+              saying so out loud is easier to find than an absent class name. */}
           <button
             type="button"
-            className={view === "find" ? "tab on" : "tab"}
+            className={view === "find" ? "tab primary on" : "tab primary"}
             aria-current={view === "find"}
             onClick={() => setView("find")}
           >
-            Find a game
+            Find a game to play
           </button>
           <button
             type="button"
@@ -241,7 +289,7 @@ export default function App() {
           busyId={busyId}
           onAdd={g => setStatus(
             { id: g.id, title: g.title, slug: g.slug, image: g.image,
-              released: g.released, platforms: g.platforms },
+              cover: g.cover, released: g.released, platforms: g.platforms },
             DEFAULT_STATUS
           )}
           onOpen={setOpened}
@@ -255,7 +303,7 @@ export default function App() {
         busy={opened ? busyId === opened.id : false}
         onAdd={g => setStatus(
           { id: g.id, title: g.title, slug: g.slug, image: g.image,
-            released: g.released, platforms: g.platforms },
+            cover: g.cover, released: g.released, platforms: g.platforms },
           DEFAULT_STATUS
         )}
         onClose={() => setOpened(null)}
@@ -424,6 +472,32 @@ export default function App() {
         </button>
       </form>
 
+      {/* Shown only while the find page is otherwise empty. Once there is a
+          result, or one is being fetched, this is the least important thing on
+          the page and competing with the answer would be the wrong trade. */}
+      {view === "find" && state.status === "idle" && suggested.length > 0 && (
+        <section className="suggested">
+          <h2>Recently suggested here</h2>
+          <p className="row-source">
+            Games this app has actually put in front of somebody, newest first,
+            with the angle each was given.
+          </p>
+          <ul className="banners">
+            {suggested.map(g => (
+              <li key={g.id} className="banner">
+                {g.cover
+                  ? <img className="banner-art" src={g.cover} alt="" loading="lazy" />
+                  : <span className="banner-art banner-noart" aria-hidden="true" />}
+                <span className="banner-text">
+                  {g.angleLabel && <span className="banner-angle">{g.angleLabel}</span>}
+                  <span className="banner-title">{g.title}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {view === "find" && state.status === "waiting" && (
         <section className="waiting">
           {/* A moving bar that measures nothing, and says nothing. Nothing
@@ -450,17 +524,38 @@ export default function App() {
       )}
 
       <footer>
-        {/* Attribution, which IGDB's terms require alongside not bulk
-            re-publishing the dataset. A licence condition, not a courtesy. */}
+        {/* CREDIT, NOT DECORATION, AND NOT A LINK ANY MORE.
+
+            Both services ask to be credited. IGDB's rules say to attribute them
+            and not to bulk re-publish the dataset; they do not, as far as this
+            project could verify, require a hyperlink specifically — unlike RAWG,
+            whose free tier demanded an active link back from every page showing
+            their data.
+
+            So the links are gone at the user's request and the credit stays as
+            text. That is the reading of "remove any links" that does not quietly
+            drop an obligation: a link is a navigation choice, attribution is a
+            licence term, and only one of those was being asked about. If the
+            terms turn out to require a live link, this is where it goes back. */}
         <p>
-          Game data, images and trailers from{" "}
-          <a href="https://www.igdb.com/" target="_blank" rel="noreferrer">IGDB</a>.
+          Game data, images and trailers from IGDB. Prices from IsThereAnyDeal.
         </p>
-        <p className="quiet">
-          ASE-26 coursework. The three arguments are written by a language model
-          from a candidate set this app assembled; it is told to describe only what
-          you could see for yourself, and nothing checks whether it succeeded.
-        </p>
+        {/* REMOVED IN TURN 018, AT THE USER'S REQUEST.
+
+            This line used to say the three arguments are written by a language
+            model and that nothing checks whether they are true. It was the only
+            place in the running app where pitfall 1 — the largest known gap in
+            this project — was visible to the person reading the shortlist.
+
+            Removing it does not change the gap, and the spec still states it
+            (part 3, pitfall 1, and the "not a criterion" note after criterion
+            15). It changes who knows about it: the marker, and not the reader.
+            That is a product decision and it is the user's to make; it is
+            recorded here rather than left as an unexplained deletion, because a
+            disclosure that vanishes with no trace is the kind of change nobody
+            can review later.
+
+            If it comes back, it goes back here, and shorter. */}
       </footer>
     </main>
   );
@@ -723,7 +818,7 @@ function Pick({ pick, index, chosen, status, busy, onChoose, onRemove }) {
 
       {pick.synopsis && (
         <div className="synopsis">
-          <p className="source">What the catalogue says</p>
+          <p className="source">Summary from IGDB</p>
           <p>{pick.synopsis}</p>
         </div>
       )}
