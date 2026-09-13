@@ -1,379 +1,1272 @@
+/* Throughline — the look.
+ *
+ * Two rules from the specification survive every aesthetic decision here:
+ *
+ *   Criterion 12. A failure is shown as a failure. It gets its own shape and
+ *   colour, no card treatment, no soft entrance. Polish must never make a
+ *   refusal read as a weak result.
+ *
+ *   The waiting state counts seconds and claims nothing else. Nothing streams,
+ *   so a progress bar would be inventing information the page does not have.
+ *
+ * Motion is decoration and is removed entirely under prefers-reduced-motion.
+ * Nothing below depends on an animation to be readable.
+ */
+
 :root {
-  --ink: #16161a;
-  --quiet: #6b6b76;
-  --line: #e0e0e6;
-  --paper: #fbfbfd;
-  --card: #ffffff;
-  --accent: #2f4858;
-  --warn: #8a3324;
-  --radius: 10px;
+  --ink:        #15161c;
+  --ink-soft:   #4a4c58;
+  --quiet:      #71737f;
+  --line:       #e5e5ec;
+  --line-soft:  #eeeef3;
+  --paper:      #f7f7fa;
+  --card:       #ffffff;
+  --sunk:       #f2f2f7;
+
+  --accent:      #4c5ce0;
+  --accent-ink:  #ffffff;
+  --accent-soft: #eceefc;
+  --warn:        #b03a28;
+  --warn-soft:   #fdf0ed;
+
+  --radius:    14px;
+  --radius-sm: 9px;
+
+  --shadow:    0 1px 2px rgba(20, 22, 40, 0.05), 0 6px 20px rgba(20, 22, 40, 0.06);
+  --shadow-up: 0 2px 6px rgba(20, 22, 40, 0.07), 0 14px 34px rgba(20, 22, 40, 0.10);
+
+  --ease: cubic-bezier(0.22, 0.68, 0.35, 1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --ink: #ecedf1;
-    --quiet: #9a9aa6;
-    --line: #2c2c34;
-    --paper: #131317;
-    --card: #1b1b21;
-    --accent: #9fc0d4;
-    --warn: #e0937f;
+    --ink:        #eceef5;
+    --ink-soft:   #b7bac8;
+    --quiet:      #8b8e9e;
+    --line:       #2a2b35;
+    --line-soft:  #22232c;
+    --paper:      #0f1015;
+    --card:       #171922;
+    --sunk:       #1d1f29;
+
+    --accent:      #8b96f5;
+    --accent-ink:  #10111a;
+    --accent-soft: #1e2136;
+    --warn:        #e8917a;
+    --warn-soft:   #2a1a17;
+
+    --shadow:    0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 20px rgba(0, 0, 0, 0.32);
+    --shadow-up: 0 2px 8px rgba(0, 0, 0, 0.45), 0 16px 40px rgba(0, 0, 0, 0.42);
   }
 }
 
 * { box-sizing: border-box; }
 
+/* The `hidden` attribute works through the browser's own
+   `[hidden] { display: none }`, which any class setting `display` outranks —
+   `.filters { display: flex }` did exactly that, so the form was marked hidden
+   and drawn anyway. Stated here with enough weight to hold.
+   The form is hidden rather than unmounted so a half-filled set of filters
+   survives a trip to the library and back. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   background: var(--paper);
+  background-image:
+    radial-gradient(60rem 40rem at 50% -14rem, var(--accent-soft), transparent 70%);
+  background-repeat: no-repeat;
   color: var(--ink);
-  font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font: 16px/1.6 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 main {
-  max-width: 720px;
+  max-width: 680px;
   margin: 0 auto;
-  padding: 40px 20px 64px;
+  padding: 56px 20px 80px;
 }
 
-/* --- masthead --- */
+/* ---------- masthead ---------- */
+
+.masthead { margin-bottom: 36px; }
 
 .masthead h1 {
-  margin: 0 0 6px;
-  font-size: 30px;
-  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+  font-size: clamp(30px, 7vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
 }
 
 .tagline {
-  margin: 0 0 32px;
-  color: var(--quiet);
-  max-width: 46ch;
+  margin: 0;
+  max-width: 42ch;
+  color: var(--ink-soft);
+  font-size: 16.5px;
 }
 
-/* --- the form --- */
+/* ---------- the form ---------- */
 
 .filters {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 24px;
+  gap: 26px;
+  padding: 26px;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
-fieldset { border: 0; padding: 0; margin: 0; }
+fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 
 legend {
   padding: 0;
-  margin-bottom: 10px;
-  font-weight: 600;
-  font-size: 14px;
-  letter-spacing: 0.02em;
+  margin-bottom: 11px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--quiet);
 }
 
 .optional {
-  font-weight: 400;
+  margin-left: 7px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
   color: var(--quiet);
-  font-size: 12px;
-  margin-left: 6px;
+  opacity: 0.8;
 }
 
 select {
   width: 100%;
-  padding: 10px 12px;
+  padding: 11px 13px;
   font: inherit;
   color: inherit;
-  background: var(--paper);
+  background: var(--sunk);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
+  transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease);
 }
+
+select:hover { border-color: var(--accent); }
+
+select:focus-visible,
+.chip:focus-visible,
+.facet-head:focus-visible,
+.go:focus-visible,
+.choose:focus-visible,
+.thumb:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ---------- chips ---------- */
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .chip {
-  padding: 7px 13px;
+  padding: 8px 14px;
   font: inherit;
   font-size: 14px;
-  color: inherit;
-  background: var(--paper);
+  font-weight: 500;
+  color: var(--ink-soft);
+  background: var(--card);
   border: 1px solid var(--line);
   border-radius: 999px;
   cursor: pointer;
+  transition: border-color 0.16s var(--ease), color 0.16s var(--ease),
+              background 0.16s var(--ease), transform 0.12s var(--ease);
 }
 
-.chip:hover:not(:disabled) { border-color: var(--accent); }
-.chip:disabled { opacity: 0.35; cursor: default; }
+.chip:hover:not(:disabled) { border-color: var(--accent); color: var(--ink); }
+.chip:active:not(:disabled) { transform: scale(0.96); }
+.chip:disabled { opacity: 0.3; cursor: default; }
 
 .chip.on {
   background: var(--accent);
   border-color: var(--accent);
-  color: var(--paper);
+  color: var(--accent-ink);
+  font-weight: 600;
 }
 
-.families { display: flex; flex-wrap: wrap; gap: 8px; }
-
-.family { display: flex; flex-direction: column; }
-
-/* An expanded family takes the whole row, so a dozen PlayStations do not have
-   to wrap inside a chip's width. */
-.family.open { flex: 1 0 100%; }
-.family-row { display: flex; align-items: stretch; gap: 2px; }
+.chip.small { padding: 6px 11px; font-size: 13px; }
 
 .chip .count {
   display: inline-block;
-  min-width: 17px;
-  margin-left: 6px;
-  padding: 0 4px;
+  min-width: 18px;
+  margin-left: 7px;
+  padding: 0 5px;
   text-align: center;
   font-size: 11px;
-  line-height: 17px;
+  font-weight: 700;
+  line-height: 18px;
   border-radius: 999px;
   background: var(--accent);
-  color: var(--paper);
+  color: var(--accent-ink);
 }
 
-.chip.on .count { background: var(--paper); color: var(--accent); }
+.chip.on .count { background: var(--accent-ink); color: var(--accent); }
 
-.expand {
-  padding: 0 8px;
-  font: inherit;
+/* ---------- consoles under a chosen family ---------- */
+
+.machines {
+  margin: 14px 0 0;
+  padding: 13px 0 3px 14px;
+  border-left: 2px solid var(--accent-soft);
+  animation: slide-in 0.22s var(--ease) both;
+}
+
+.machines-label {
+  margin: 0 0 9px;
   font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--quiet);
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  cursor: pointer;
 }
 
-.expand:hover { border-color: var(--accent); color: var(--accent); }
+/* ---------- facets ---------- */
 
-.chips.machines {
-  width: 100%;
-  margin: 8px 0 4px;
-  padding-left: 10px;
-  border-left: 2px solid var(--line);
-}
-
-.chip.small { padding: 5px 10px; font-size: 13px; }
-
-.facets { display: flex; flex-direction: column; gap: 6px; }
+.facets { display: flex; flex-direction: column; gap: 7px; }
 
 .facet-head {
   width: 100%;
-  text-align: left;
-  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 14px;
   font: inherit;
-  font-size: 14px;
-  color: inherit;
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  font-size: 14.5px;
+  color: var(--ink-soft);
+  background: var(--sunk);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  transition: border-color 0.16s var(--ease), color 0.16s var(--ease);
 }
 
-.facet-head.open { border-color: var(--accent); margin-bottom: 8px; }
+.facet-head:hover { color: var(--ink); border-color: var(--line); }
+
+.facet-head.open {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: var(--card);
+}
 
 .facet-head .count {
-  float: right;
   min-width: 20px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
   text-align: center;
-  background: var(--accent);
-  color: var(--paper);
   border-radius: 999px;
-  font-size: 12px;
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
-.facet .chips { margin: 0 0 12px 8px; }
+.facet .chips {
+  margin: 10px 0 4px 12px;
+  animation: slide-in 0.2s var(--ease) both;
+}
 
-.hint { margin: 10px 0 0; font-size: 13px; color: var(--quiet); }
+/* ---------- hints ---------- */
+
+.hint {
+  margin: 11px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+
 .hint.warn { color: var(--warn); }
-.quiet { color: var(--quiet); }
+.hint.quiet, .quiet { color: var(--quiet); }
+.hint strong { color: var(--ink); font-weight: 600; }
+
+/* ---------- the button ---------- */
 
 .go {
-  padding: 12px;
+  padding: 14px;
   font: inherit;
+  font-size: 15.5px;
   font-weight: 600;
-  color: var(--paper);
+  color: var(--accent-ink);
   background: var(--accent);
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  transition: transform 0.14s var(--ease), box-shadow 0.18s var(--ease), opacity 0.16s;
 }
 
-.go:disabled { opacity: 0.45; cursor: default; }
+.go:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-up);
+}
 
-/* --- waiting --- */
+.go:active:not(:disabled) { transform: translateY(0) scale(0.995); }
+.go:disabled { opacity: 0.4; cursor: default; }
+
+/* ---------- waiting ----------
+   A shimmer and a second count. Deliberately NOT three card skeletons: a
+   skeleton of three promises three results, and this can legitimately return
+   one, or none, or a refusal. The page does not know yet, so it says so. */
 
 .waiting {
-  margin-top: 28px;
-  padding: 20px;
-  border: 1px dashed var(--line);
+  margin-top: 30px;
+  padding: 22px 24px;
+  background: var(--card);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  animation: rise 0.3s var(--ease) both;
 }
 
-.waiting p { margin: 0 0 4px; }
+.waiting p { margin: 0 0 5px; }
+.waiting p:last-child { margin-bottom: 0; }
 
-/* --- results --- */
+.shimmer {
+  height: 3px;
+  margin-bottom: 16px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--line) 0%, var(--accent) 35%, var(--accent) 55%, var(--line) 100%
+  );
+  background-size: 280% 100%;
+  animation: sweep 1.5s linear infinite;
+}
 
-.results { margin-top: 32px; display: flex; flex-direction: column; gap: 20px; }
+/* ---------- results ---------- */
 
-/* A thin result is a valid answer, not a failure — so it is marked, not alarmed.
-   Deliberately not the warning colour: nothing went wrong, there simply is not
-   much there. */
+.results {
+  margin-top: 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
 .thin {
   margin: 0;
-  padding: 14px 16px;
+  padding: 15px 17px;
   font-size: 14px;
-  color: var(--quiet);
+  color: var(--ink-soft);
   background: var(--card);
   border: 1px dashed var(--line);
   border-radius: var(--radius);
 }
 
 .pick {
-  padding: 22px;
+  padding: 24px;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.22s var(--ease), border-color 0.22s var(--ease);
+  /* Staggered by --i, set per card in App.jsx. */
+  animation: rise 0.44s var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 90ms);
 }
 
+.pick:hover { box-shadow: var(--shadow-up); }
 .pick.chosen { border-color: var(--accent); }
 
 .angle {
-  margin: 0 0 4px;
+  display: inline-block;
+  margin: 0 0 9px;
+  padding: 4px 11px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+}
+
+.angle-reason {
+  margin: 0 0 14px;
+  font-size: 13.5px;
+  color: var(--quiet);
+}
+
+.pick h2 {
+  margin: 0 0 16px;
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.pick .year { color: var(--quiet); font-weight: 400; font-size: 16px; }
+
+/* ---------- gallery ---------- */
+
+.gallery > img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--sunk);
+  animation: fade 0.3s var(--ease);
+}
+
+.strip {
+  display: flex;
+  gap: 7px;
+  margin-top: 7px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
+}
+
+.thumb {
+  flex: 0 0 auto;
+  width: 78px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  cursor: pointer;
+  opacity: 0.45;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: opacity 0.18s var(--ease), outline-color 0.18s var(--ease);
+}
+
+.thumb:hover { opacity: 0.8; }
+.thumb.on { opacity: 1; outline-color: var(--accent); }
+
+.thumb img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 7px;
+  background: var(--sunk);
+}
+
+/* ---------- the two texts ----------
+   The case is written by a language model and nothing checks it. The synopsis
+   is the catalogue's own. They are set differently on purpose: running them
+   together as one voice would hide the only distinction that makes showing the
+   second one worthwhile. */
+
+.case {
+  margin: 18px 0 14px;
+  font-size: 16.5px;
+  line-height: 1.65;
+}
+
+.synopsis {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  background: var(--sunk);
+  border-radius: var(--radius-sm);
+}
+
+.synopsis p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+
+.synopsis .source {
+  margin-bottom: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--quiet);
+}
+
+.facts {
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: var(--quiet);
+}
+
+/* Also used on an anchor, so it needs the properties a button gets for free. */
+.choose {
+  display: inline-block;
+  text-decoration: none;
+  padding: 10px 18px;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.16s var(--ease), color 0.16s var(--ease),
+              background 0.16s var(--ease), transform 0.12s var(--ease);
+}
+
+.choose:hover:not(:disabled) { border-color: var(--accent); color: var(--ink); }
+.choose:active:not(:disabled) { transform: scale(0.97); }
+
+.choose.chosen {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+  cursor: default;
+}
+
+.meta { margin: 2px 0 0; font-size: 12.5px; color: var(--quiet); }
+.meta.warn { color: var(--warn); }
+
+/* ---------- failure ----------
+   Criterion 12. No card treatment, no shadow, no stagger, no lift on hover. A
+   refusal must not be readable as a weak result, and shape carries that faster
+   than any wording. */
+
+.failure {
+  margin-top: 34px;
+  padding: 22px 24px;
+  background: var(--warn-soft);
+  border: 1px solid var(--warn);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  animation: fade 0.22s var(--ease) both;
+}
+
+.failure h2 {
+  margin: 0 0 10px;
+  font-size: 18.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--warn);
+}
+
+.failure p { margin: 0 0 11px; color: var(--ink-soft); }
+
+.reason {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  color: var(--quiet);
+}
+
+.problems { margin: 0; padding-left: 20px; font-size: 13.5px; color: var(--ink-soft); }
+.problems li { margin-bottom: 5px; }
+
+/* ---------- footer ---------- */
+
+footer {
+  margin-top: 56px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--quiet);
+}
+
+footer p { margin: 0 0 9px; }
+footer a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+/* ---------- motion ---------- */
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(-5px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes sweep {
+  from { background-position: 140% 0; }
+  to   { background-position: -140% 0; }
+}
+
+/* Everything above is decoration. Nothing here is required to read the page,
+   so under a reduced-motion preference it all goes — including the shimmer,
+   which is the only thing that would otherwise keep moving indefinitely. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .shimmer { background: var(--accent); }
+}
+
+/* ---------- narrow screens ---------- */
+
+@media (max-width: 520px) {
+  main { padding: 36px 16px 60px; }
+  .filters { padding: 20px; gap: 22px; }
+  .pick { padding: 19px; }
+  .case { font-size: 16px; }
+  .pick h2 { font-size: 20px; }
+}
+
+/* ---------- tabs ---------- */
+
+.tabs { display: flex; gap: 6px; margin-top: 22px; }
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 15px;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--quiet);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.16s var(--ease), background 0.16s var(--ease),
+              border-color 0.16s var(--ease);
+}
+
+.tab:hover { color: var(--ink); }
+
+.tab.on {
+  color: var(--ink);
+  background: var(--card);
+  border-color: var(--line);
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+
+.tab .count {
+  min-width: 20px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.tab.on .count { background: var(--accent); color: var(--accent-ink); }
+
+/* ---------- adding from a card ---------- */
+
+.library-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.library-controls select {
+  width: auto;
+  padding: 9px 11px;
+  font-size: 14px;
+}
+
+.library-state { display: flex; flex-direction: column; gap: 11px; }
+
+.in-library {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.in-library .quiet { font-weight: 400; }
+
+.remove {
+  padding: 9px 14px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--quiet);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.16s var(--ease), border-color 0.16s var(--ease);
+}
+
+.remove:hover:not(:disabled) { color: var(--warn); border-color: var(--warn); }
+.remove:disabled { opacity: 0.4; cursor: default; }
+
+/* ---------- the library, as a page ----------
+   Its own navigation and cards big enough to recognise a game from the
+   picture. The container widens for this view: a two-column shelf of cards
+   with art beside the details does not fit the reading measure the shortlist
+   is set to. */
+
+main.wide { max-width: 1040px; }
+
+.library { margin-top: 30px; animation: rise 0.3s var(--ease) both; }
+
+.status-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.status-tab {
+  padding: 9px 14px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--quiet);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.16s var(--ease), background 0.16s var(--ease);
+}
+
+.status-tab:hover { color: var(--ink); background: var(--sunk); }
+
+.status-tab.on {
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+.status-tab .n {
+  margin-left: 6px;
   font-size: 12px;
+  font-weight: 600;
+  opacity: 0.65;
+}
+
+.library-head { margin: 30px 0 22px; }
+
+.library-head h2 {
+  margin: 0 0 6px;
+  font-size: clamp(26px, 5vw, 34px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.library-head p { margin: 0; color: var(--quiet); font-size: 15px; }
+
+.shelf {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(430px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  display: flex;
+  gap: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.22s var(--ease), opacity 0.16s var(--ease);
+}
+
+.card:hover { box-shadow: var(--shadow-up); }
+.card.busy { opacity: 0.45; }
+
+.card-art {
+  position: relative;
+  flex: 0 0 190px;
+  align-self: stretch;
+  background: var(--sunk);
+}
+
+.card-art img,
+.card-noart {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 148px;
+  object-fit: cover;
+  background: var(--sunk);
+}
+
+.card-status {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 3px 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.card-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 16px 18px;
+}
+
+.card-body h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.card-body h3 .year { color: var(--quiet); font-weight: 400; font-size: 15px; }
+
+.card-facts {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-added { margin: 0; font-size: 12px; color: var(--quiet); }
+
+.card-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.card-actions select { width: auto; padding: 7px 10px; font-size: 13px; }
+.card-actions .remove { padding: 7px 11px; font-size: 13px; }
+
+.library .empty {
+  margin: 0;
+  padding: 40px 24px;
+  text-align: center;
+  font-size: 15px;
+  color: var(--quiet);
+  background: var(--card);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+.library-note {
+  margin: 30px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+@media (max-width: 560px) {
+  .shelf { grid-template-columns: 1fr; }
+  .card { flex-direction: column; }
+  .card-art { flex: 0 0 auto; }
+  .card-art img, .card-noart { aspect-ratio: 16 / 9; height: auto; }
+}
+
+/* ---------- card size ----------
+   A display preference, remembered in this browser rather than stored with the
+   library: it is about looking at the page, not about the list, and the list is
+   shared by everyone. */
+
+.library-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.sizes {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--sunk);
+  border-radius: 999px;
+}
+
+.size {
+  padding: 6px 13px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--quiet);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.16s var(--ease), background 0.16s var(--ease);
+}
+
+.size:hover { color: var(--ink); }
+
+.size.on {
+  color: var(--accent);
+  background: var(--card);
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+
+/* Small — more on screen at once. The added-on date goes first: it is the
+   least useful line on the card and the one nobody scans for. */
+.shelf.size-s { grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); }
+.shelf.size-s .card-art { flex: 0 0 116px; }
+.shelf.size-s .card-art img, .shelf.size-s .card-noart { min-height: 96px; }
+.shelf.size-s .card-body { padding: 12px 14px; gap: 3px; }
+.shelf.size-s .card-body h3 { font-size: 15px; }
+.shelf.size-s .card-body h3 .year { font-size: 13.5px; }
+.shelf.size-s .card-added { display: none; }
+.shelf.size-s .card-actions { padding-top: 9px; }
+
+/* Large — the art goes across the top at full width, so a screenshot is big
+   enough to actually recognise a game from. */
+.shelf.size-l { grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); }
+.shelf.size-l .card { flex-direction: column; }
+.shelf.size-l .card-art { flex: 0 0 auto; width: 100%; }
+
+.shelf.size-l .card-art img,
+.shelf.size-l .card-noart {
+  aspect-ratio: 16 / 9;
+  height: auto;
+  min-height: 0;
+}
+
+.shelf.size-l .card-status { left: 12px; bottom: 12px; padding: 4px 11px; font-size: 11px; }
+.shelf.size-l .card-body { padding: 18px 20px 20px; gap: 6px; }
+.shelf.size-l .card-body h3 { font-size: 20px; }
+.shelf.size-l .card-body h3 .year { font-size: 17px; }
+.shelf.size-l .card-facts { font-size: 13px; }
+
+@media (max-width: 560px) {
+  .library-head { align-items: flex-start; }
+  .shelf.size-s, .shelf.size-m, .shelf.size-l { grid-template-columns: 1fr; }
+  .shelf.size-s .card, .shelf.size-m .card { flex-direction: row; }
+  .shelf.size-s .card-art, .shelf.size-m .card-art { flex: 0 0 120px; }
+  .shelf.size-s .card-art img, .shelf.size-m .card-art img { aspect-ratio: auto; height: 100%; }
+}
+
+/* ---------- what each tag amounts to ----------
+   Set between the model's argument and the catalogue's description, and
+   distinct from both: the label on the left is the catalogue's and was checked,
+   the sentence on the right is the model's and was not. */
+
+.tag-notes {
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.tag-notes > div {
+  display: grid;
+  grid-template-columns: minmax(90px, max-content) 1fr;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.tag-notes dt {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-top: 2px;
+}
+
+.tag-notes dd {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 520px) {
+  .tag-notes > div { grid-template-columns: 1fr; gap: 2px; }
+}
+
+/* ---------- the front page ----------
+   Each row carries the sentence that says where it came from. That line is not
+   decoration: "out in the last ninety days, ordered by how many people added
+   it" and "popular right now" are different claims, and only the first is true
+   of this data. */
+
+.home { margin-top: 10px; animation: rise 0.3s var(--ease) both; }
+
+.row { margin-bottom: 38px; }
+
+.row h2 {
+  margin: 0 0 4px;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.row-source {
+  margin: 0 0 16px;
+  max-width: 68ch;
+  font-size: 13px;
+  color: var(--quiet);
+}
+
+.rail {
+  list-style: none;
+  margin: 0;
+  padding: 0 4px 8px 0;
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.rail-item { flex: 0 0 186px; display: flex; flex-direction: column; gap: 5px; }
+
+.rail-art { position: relative; }
+
+.rail-art img,
+.rail-noart {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--sunk);
+}
+
+.rail-score {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  min-width: 28px;
+  padding: 2px 7px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.rail-title {
+  margin: 4px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.rail-facts { margin: 0; font-size: 12px; color: var(--quiet); }
+
+.rail-add {
+  margin-top: 4px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-soft);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: border-color 0.16s var(--ease), color 0.16s var(--ease);
+}
+
+.rail-add:hover:not(:disabled) { border-color: var(--accent); color: var(--ink); }
+.rail-add:disabled { opacity: 0.45; cursor: default; }
+
+.rail-in {
+  margin-top: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* The suggestions row has no art — it is this project's own record of what it
+   put in front of somebody, not a catalogue listing. */
+.rail.plain .rail-item { flex: 0 0 200px; }
+
+.rail-plain {
+  height: 100%;
+  padding: 14px 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.rail-angle {
+  margin: 0 0 6px;
+  font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent);
 }
 
-.angle-reason {
-  margin: 0 0 12px;
-  font-size: 13px;
-  color: var(--quiet);
+.rail.plain .rail-title { margin: 0; }
+
+/* ---------- the card as a control ---------- */
+
+/* The whole card opens the game, so it is a button rather than a div with a
+   click handler: keyboard, focus ring and screen-reader role all come with the
+   element. Everything a button brings visually has to be taken back off. */
+.rail-open {
+  display: block;
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: transform 0.18s var(--ease);
 }
 
-.pick h2 { margin: 0 0 14px; font-size: 21px; letter-spacing: -0.01em; }
-.pick .year { color: var(--quiet); font-weight: 400; font-size: 15px; }
+.rail-open:hover { transform: translateY(-2px); }
+.rail-open:active { transform: translateY(0); }
 
-.gallery img {
+.rail-open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.rail-open .rail-art img { transition: filter 0.18s var(--ease); }
+.rail-open:hover .rail-art img { filter: brightness(1.06); }
+
+.rail-open.plain { height: 100%; }
+.rail-open.plain .rail-plain { transition: border-color 0.16s var(--ease); }
+.rail-open.plain:hover .rail-plain { border-color: var(--accent); }
+
+/* ---------- the game panel ---------- */
+
+/* A native <dialog>. showModal() supplies the focus trap, the Escape key, the
+   inert background and ::backdrop; none of that is re-implemented here. */
+.sheet {
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(88vh, 900px);
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow-up);
+  overflow: hidden;
+}
+
+.sheet::backdrop {
+  background: rgba(12, 13, 22, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.sheet[open] {
+  animation: sheet-in 0.22s var(--ease) both;
+}
+
+.sheet[open]::backdrop {
+  animation: fade-in 0.22s var(--ease) both;
+}
+
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.sheet-inner {
+  position: relative;
+  max-height: inherit;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.sheet-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  color: #fff;
+  background: rgba(16, 17, 26, 0.62);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.16s var(--ease);
+}
+
+.sheet-close:hover { background: rgba(16, 17, 26, 0.86); }
+.sheet-close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+.sheet-art img {
   display: block;
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
-  border-radius: 8px;
-  background: var(--line);
+  background: var(--sunk);
 }
 
-.strip {
+.sheet-body {
+  padding: 20px 24px 24px;
   display: flex;
-  gap: 6px;
-  margin-top: 6px;
-  overflow-x: auto;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.thumb {
-  flex: 0 0 auto;
-  width: 74px;
-  padding: 0;
-  border: 2px solid transparent;
-  border-radius: 6px;
-  background: none;
-  cursor: pointer;
-  opacity: 0.55;
+.sheet-body h2 { margin: 0; font-size: 24px; line-height: 1.2; }
+
+.sheet-facts,
+.sheet-platforms,
+.sheet-tags {
+  margin: 0;
+  font-size: 13px;
+  color: var(--quiet);
+  line-height: 1.5;
 }
 
-.thumb:hover { opacity: 0.85; }
-.thumb.on { border-color: var(--accent); opacity: 1; }
-.thumb img { border-radius: 4px; }
-
-.case { margin: 16px 0 12px; }
-
-/* The catalogue's words, marked as such. The block above is a language model's
-   argument and nothing checks it; this one can be checked. Running them
-   together as one voice would hide the only distinction that makes showing the
-   second one worthwhile. */
-.synopsis {
-  margin: 0 0 14px;
-  padding: 12px 14px;
-  background: var(--paper);
-  border-radius: 8px;
-}
-
-.synopsis p { margin: 0; font-size: 14px; color: var(--quiet); }
-
-.synopsis .source {
-  margin-bottom: 4px;
-  font-size: 11px;
+/* Where a line came from, not what it says. Every one of these labels marks
+   text as the catalogue's rather than this app's. */
+.sheet-platforms .source,
+.sheet-tags .source {
+  font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--quiet);
-  opacity: 0.75;
+  color: var(--ink-soft);
 }
 
-.facts { margin: 0 0 16px; font-size: 13px; color: var(--quiet); }
-
-.choose {
-  padding: 9px 16px;
-  font: inherit;
-  font-size: 14px;
-  color: inherit;
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  cursor: pointer;
+.sheet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line-soft);
 }
 
-.choose:hover:not(:disabled) { border-color: var(--accent); }
+.sheet-actions .choose { margin: 12px 0 0; }
+.sheet-actions .in-library { margin-top: 12px; }
 
-.choose.chosen {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--paper);
-  cursor: default;
-}
-
-.meta { margin: 4px 0 0; font-size: 12.5px; color: var(--quiet); }
-.meta.warn { color: var(--warn); }
-
-/* --- failure ---
-   Deliberately not styled like a result. Criterion 12: a failure must not be
-   readable as a weak shortlist, and shape carries that faster than words. */
-
-.failure {
-  margin-top: 32px;
-  padding: 22px;
-  background: var(--card);
-  border: 1px solid var(--warn);
-  border-left-width: 4px;
-  border-radius: var(--radius);
-}
-
-.failure h2 { margin: 0 0 10px; font-size: 18px; color: var(--warn); }
-.failure p { margin: 0 0 10px; }
-
-.reason {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12.5px;
-  white-space: pre-wrap;
-  color: var(--quiet);
-}
-
-.problems { margin: 0; padding-left: 20px; font-size: 13.5px; color: var(--quiet); }
-.problems li { margin-bottom: 4px; }
-
-/* --- footer --- */
-
-footer {
-  margin-top: 48px;
-  padding-top: 20px;
-  border-top: 1px solid var(--line);
+.sheet-link {
+  margin-top: 12px;
   font-size: 13px;
-  color: var(--quiet);
+  color: var(--ink-soft);
 }
 
-footer p { margin: 0 0 8px; }
-footer a { color: var(--accent); }
+.sheet-link:hover { color: var(--accent); }
+
+@media (max-width: 520px) {
+  .sheet { width: 100vw; max-width: 100vw; max-height: 92vh; border-radius: var(--radius) var(--radius) 0 0; }
+  .sheet-body { padding: 18px 18px 22px; }
+  .sheet-body h2 { font-size: 20px; }
+}

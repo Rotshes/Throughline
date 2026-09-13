@@ -7,15 +7,21 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "check": "node scripts/check-catalogue.js && node scripts/check-shortlist.js",
+    "check": "node scripts/check-catalogue.js && node scripts/check-platforms.js && node scripts/check-shortlist.js && node scripts/check-library.js && node scripts/check-detail.js",
     "check:catalogue": "node scripts/check-catalogue.js",
+    "check:platforms": "node scripts/check-platforms.js",
     "check:shortlist": "node scripts/check-shortlist.js",
+    "check:library": "node scripts/check-library.js",
     "catalogue:pin": "node scripts/pin-vocabularies.js",
     "catalogue:inspect": "node scripts/inspect-catalogue.js",
     "tags:pin": "node scripts/pin-tags.js",
     "candidates": "node scripts/run-candidates.js",
     "shortlist": "node scripts/run-shortlist.js",
-    "start": "netlify dev"
+    "start": "netlify dev",
+    "check:detail": "node scripts/check-detail.js",
+    "probe:front": "node scripts/probe-front.js",
+    "probe:front2": "node scripts/probe-front-2.js",
+    "probe:igdb": "node scripts/probe-igdb.js"
   },
   "engines": {
     "node": ">=18"

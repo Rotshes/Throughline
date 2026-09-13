@@ -21,6 +21,23 @@
 [functions]
   node_bundler = "esbuild"
   included_files = ["prompts/**", "schemas/**", "data/**"]
+  # data/** covers categories, platforms, tags, angles and statuses. All five are
+  # required at request time; none is optional.
+
+[[redirects]]
+  from = "/api/home"
+  to   = "/.netlify/functions/home"
+  status = 200
+
+[[redirects]]
+  from = "/api/game"
+  to   = "/.netlify/functions/game"
+  status = 200
+
+[[redirects]]
+  from = "/api/library"
+  to   = "/.netlify/functions/library"
+  status = 200
 
 [[redirects]]
   from = "/api/shortlist/click"
