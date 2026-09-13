@@ -42,7 +42,7 @@ const DETAIL_FIELDS = [
   "platforms.slug", "platforms.abbreviation",
   "involved_companies.company.name", "involved_companies.developer",
   "involved_companies.publisher",
-  "age_ratings.rating_category", "websites.url", "websites.category",
+  "age_ratings.rating_category", "websites.url", "websites.type",
 ].join(",");
 
 /**
@@ -103,6 +103,11 @@ export function shapeDetail(raw, v = loadVocabulary()) {
     title: base.title,
     released: base.released,
     image: base.image,
+    // Box art, kept separate from the display image. The library shows this
+    // rather than a screenshot: a shelf of games is the one place portrait
+    // cover art is the right picture, and the only place in this app with a
+    // frame shaped for it.
+    cover: base.cover,
     gallery,
     videos,
     platforms: base.platforms,
@@ -119,24 +124,63 @@ export function shapeDetail(raw, v = loadVocabulary()) {
     developers: named(c => c?.developer).slice(0, 3),
     publishers: named(c => c?.publisher).slice(0, 2),
     website: firstOfficialSite(raw?.websites),
+    // Player reviews on a store page, not the critic panel behind the score.
+    // The label in the interface says which.
+    reviews: reviewLink(raw?.websites),
   };
 }
 
 /**
- * The game's own site, if it has one.
+ * IGDB's website vocabulary, by the ids it actually uses.
  *
- * IGDB's website category 1 is "official". Anything else is a store page, a
- * subreddit or a social account, none of which is what "Official site" on a
- * button means.
+ * `1` is the game's own site. `13` is its Steam page, which is the only one of
+ * the twenty-six that carries reviews somebody can read.
+ *
+ * THE FIELD IS `type`, NOT `category`.
+ *
+ *   It was `category` when this file was written for RAWG and it is `type` now.
+ *   Nothing failed: `w.category` was simply `undefined` for every website of
+ *   every game, `firstOfficialSite` returned null every time, and the "Official
+ *   site" link was absent rather than broken — which looks exactly like a
+ *   catalogue where no game has an official site.
+ *
+ *   Third rename this project has hit, after `game_type` and
+ *   `external_game_source`. Found by accident while probing for reviews, not by
+ *   any check, because a check written against the same wrong field name would
+ *   have agreed with the code. Pitfall 25.
  */
-export function firstOfficialSite(websites) {
+const SITE_OFFICIAL = 1;
+const SITE_STEAM = 13;
+
+function siteOfType(websites, type) {
   if (!Array.isArray(websites)) return null;
   for (const w of websites) {
-    if (w?.category !== 1) continue;
+    if (w?.type !== type) continue;
     const url = safeHttpUrl(w.url);
     if (url) return url;
   }
   return null;
+}
+
+/** The game's own site, if it has one. */
+export function firstOfficialSite(websites) {
+  return siteOfType(websites, SITE_OFFICIAL);
+}
+
+/**
+ * Somewhere a person can read reviews of this game.
+ *
+ * Not critic reviews, and the interface must not call them that. IGDB serves no
+ * review text and no review links — measured in `scripts/probe-reviews.js`, ten
+ * endpoints and a full website vocabulary with nothing review-shaped in it. The
+ * critic score this app shows is an aggregate whose sources it cannot name.
+ *
+ * A Steam page is what is actually available: player reviews, written by people
+ * who bought it, on a page this catalogue already links to by id. That is a
+ * smaller claim than the one asked for and it is the true one.
+ */
+export function reviewLink(websites) {
+  return siteOfType(websites, SITE_STEAM);
 }
 
 /** An href is only rendered for a URL this project can name the scheme of. */

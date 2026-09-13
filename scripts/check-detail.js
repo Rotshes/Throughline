@@ -18,7 +18,7 @@
  *   node scripts/check-detail.js
  */
 
-import { shapeDetail, safeHttpUrl, firstOfficialSite } from "../src/detail.js";
+import { shapeDetail, safeHttpUrl, firstOfficialSite, reviewLink } from "../src/detail.js";
 
 let passed = 0;
 const failures = [];
@@ -74,9 +74,13 @@ const FULL = {
     { company: { name: "Pub Two" }, publisher: true },
     { company: { name: "Pub Three" }, publisher: true },
   ],
+  // `type`, not `category`. The field was renamed and this fixture said
+  // `category` for a while — which made every check here agree with code that
+  // was returning null for every game in production. A fixture written against
+  // the same wrong field name as the code is a fixture that proves nothing.
   websites: [
-    { category: 13, url: "https://store.steampowered.com/app/1" },
-    { category: 1, url: "https://example.com/a-game" },
+    { type: 13, url: "https://store.steampowered.com/app/1" },
+    { type: 1, url: "https://example.com/a-game" },
   ],
 };
 
@@ -212,16 +216,39 @@ check("no videos is an empty list, not a null the panel has to guard", () => {
 // --- the href -------------------------------------------------------------------
 
 check("the official site is chosen over a store page", () => {
-  // IGDB website category 1 is official. Everything else is a storefront, a
-  // subreddit or a social account, and "Official site" on a button means one
-  // specific thing.
+  // Type 1 is official. Everything else is a storefront, a subreddit or a social
+  // account, and "Official site" on a button means one specific thing.
   const d = shapeDetail(FULL, VOCAB);
   assert(d.website === "https://example.com/a-game", `got ${d.website}`);
 });
 
 check("no official site means no link rather than the first one going", () => {
-  const d = shapeDetail({ ...FULL, websites: [{ category: 13, url: "https://store.example/x" }] }, VOCAB);
+  const d = shapeDetail({ ...FULL, websites: [{ type: 13, url: "https://store.example/x" }] }, VOCAB);
   assert(d.website === null, `got ${d.website}`);
+});
+
+check("the field is type, not category", () => {
+  // `websites.category` was the v3 name and is gone. Reading it returns
+  // undefined for every website of every game, so the official-site link was
+  // absent rather than broken for the whole of the IGDB migration — which looks
+  // exactly like a catalogue where no game has a website. Pitfall 25.
+  const stale = [{ category: 1, url: "https://example.com/stale" }];
+  assert(firstOfficialSite(stale) === null, "the old field name must not resolve");
+  assert(firstOfficialSite([{ type: 1, url: "https://example.com/x" }]) === "https://example.com/x");
+});
+
+check("the Steam page is offered as somewhere to read reviews", () => {
+  // Player reviews, not the critic panel behind the aggregate score. IGDB
+  // serves neither review text nor a link to its own sources — measured in
+  // scripts/probe-reviews.js.
+  const d = shapeDetail(FULL, VOCAB);
+  assert(d.reviews === "https://store.steampowered.com/app/1", `got ${d.reviews}`);
+});
+
+check("no Steam page means no review link rather than another store", () => {
+  const d = shapeDetail({ ...FULL, websites: [{ type: 17, url: "https://gog.com/x" }] }, VOCAB);
+  assert(d.reviews === null, `got ${d.reviews}`);
+  assert(reviewLink([{ type: 13, url: "javascript:alert(1)" }]) === null, "and the scheme is still checked");
 });
 
 check("http and https addresses are kept", () => {
@@ -246,10 +273,12 @@ check("nonsense and absent values are refused rather than thrown on", () => {
   assert(safeHttpUrl(42) === null);
   assert(firstOfficialSite(null) === null);
   assert(firstOfficialSite("not an array") === null);
+  assert(reviewLink(null) === null);
+  assert(reviewLink(undefined) === null);
 });
 
 check("a refused website never reaches the panel", () => {
-  const d = shapeDetail({ ...FULL, websites: [{ category: 1, url: "javascript:alert(1)" }] }, VOCAB);
+  const d = shapeDetail({ ...FULL, websites: [{ type: 1, url: "javascript:alert(1)" }] }, VOCAB);
   assert(d.website === null, `got ${d.website}`);
 });
 
