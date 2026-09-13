@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "check": "node scripts/check-catalogue.js && node scripts/check-platforms.js && node scripts/check-shortlist.js && node scripts/check-library.js && node scripts/check-detail.js",
+    "check": "node scripts/check-catalogue.js && node scripts/check-platforms.js && node scripts/check-shortlist.js && node scripts/check-library.js && node scripts/check-detail.js && node scripts/check-igdb.js",
     "check:catalogue": "node scripts/check-catalogue.js",
     "check:platforms": "node scripts/check-platforms.js",
     "check:shortlist": "node scripts/check-shortlist.js",
@@ -21,7 +21,12 @@
     "check:detail": "node scripts/check-detail.js",
     "probe:front": "node scripts/probe-front.js",
     "probe:front2": "node scripts/probe-front-2.js",
-    "probe:igdb": "node scripts/probe-igdb.js"
+    "probe:igdb": "node scripts/probe-igdb.js",
+    "probe:igdb2": "node scripts/probe-igdb-2.js",
+    "check:igdb": "node scripts/check-igdb.js",
+    "igdb:inspect": "node scripts/inspect-igdb.js",
+    "igdb:pin": "node scripts/pin-igdb.js",
+    "igdb:verify": "node scripts/inspect-igdb-catalogue.js"
   },
   "engines": {
     "node": ">=18"

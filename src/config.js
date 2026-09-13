@@ -26,6 +26,18 @@ export const config = {
   get rawgKey() {
     return required("RAWG_API_KEY");
   },
+  // IGDB, which is replacing RAWG — decision 0006. Authentication is Twitch's:
+  // a client id and a secret exchanged for a token that lasts about 57 days.
+  //
+  // The secret is a password, not an identifier. It must never appear in a
+  // VITE_-prefixed variable: Vite inlines those into the browser bundle, where
+  // anyone can read it and mint tokens against this account.
+  get twitchClientId() {
+    return required("TWITCH_CLIENT_ID");
+  },
+  get twitchClientSecret() {
+    return required("TWITCH_CLIENT_SECRET");
+  },
   // One model for both calls to begin with. The two-call split exists partly so
   // this can differ per call later, once the logs justify it. See spec.md part 5,
   // pitfall 8, and decision 0001.
