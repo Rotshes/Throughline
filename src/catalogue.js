@@ -19,6 +19,10 @@
  */
 
 import { config } from "./config.js";
+// Moved to a shared module when IGDB arrived — it was never RAWG-specific.
+// Re-exported so nothing that imports it from here has to change.
+import { trimDescription } from "./text.js";
+export { trimDescription };
 
 const BASE = "https://api.rawg.io/api";
 
@@ -78,6 +82,14 @@ const BASE = "https://api.rawg.io/api";
  * II. Without the threshold, two of five picks would be games nobody can write
  * truthfully about.
  */
+/**
+ * Which catalogue an id belongs to.
+ *
+ * A RAWG id and an IGDB id are both integers and name different games. Anything
+ * that stores an id stores this beside it — see db/migration-004-library-source.sql.
+ */
+export const SOURCE = "rawg";
+
 export const MIN_RATINGS = 200;
 
 /**
@@ -166,36 +178,6 @@ export async function fetchParentPlatforms() {
     name: p.name,
     platforms: (p.platforms || []).map(c => ({ id: c.id, slug: c.slug, name: c.name })),
   }));
-}
-
-/**
- * Trim a catalogue description to something a person will read.
- *
- * RAWG descriptions run to several paragraphs and often carry store copy,
- * bullet lists and occasionally a second language after the English. Cut at a
- * sentence boundary rather than mid-word, and prefer stopping early over
- * running long: this sits beside the model's argument, and if it is longer than
- * the argument it stops being context and becomes the page.
- *
- * Pure, so it is checked offline.
- */
-export function trimDescription(raw, limit = 420) {
-  if (typeof raw !== "string") return null;
-  const text = raw.replace(/\s+/g, " ").trim();
-  if (!text) return null;
-  if (text.length <= limit) return text;
-
-  const window = text.slice(0, limit);
-  const lastStop = Math.max(window.lastIndexOf(". "), window.lastIndexOf("! "), window.lastIndexOf("? "));
-
-  // Cut at the sentence if that leaves something worth reading; otherwise take
-  // the window and mark it. The floor is an absolute number of characters, not
-  // a fraction of the limit: a description whose first sentence ends at 150
-  // should be cut there whether the limit is 420 or 800, and "Hi." should never
-  // be the whole synopsis just because the limit happened to be small.
-  const MIN_USEFUL = 120;
-  if (lastStop >= MIN_USEFUL) return window.slice(0, lastStop + 1);
-  return window.trimEnd() + "…";
 }
 
 /**
