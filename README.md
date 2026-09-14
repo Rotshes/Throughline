@@ -53,8 +53,9 @@ known gap in the project. It is written down rather than disguised.
 | `CLAUDE.md` | The agent's standing brief. Read first. |
 | `docs/spec.md` | The specification, v3.1. The authority on what gets built. |
 | `docs/failures.md` | Twenty-eight failures seen in this project, one line each. |
+| `docs/architecture.md` | How the parts fit together, with diagrams. Start here after the spec. |
 | `docs/decisions/` | One file per decision that could have gone another way. |
-| `docs/turns/` | One record per turn of work: 001 to 020, with no 008. |
+| `docs/turns/` | One record per turn of work. 001 to 020, and [there is no 008](#the-missing-008). |
 | `docs/01-interview.md` | The reverse interview and the assumptions list. |
 | `prompts/shortlist.md` | The one live prompt, versioned like code. |
 | `schemas/shortlist.schema.json` | What the model is allowed to return. |
@@ -67,6 +68,21 @@ known gap in the project. It is written down rather than disguised.
 | `scripts/probe-*.js` | Measurements against live services. These cost requests. |
 | `scripts/case-*.js` | Reference cases from `docs/spec.md` part 4. These cost model calls. |
 | `logs/model-calls.jsonl` | Local call log. The durable copy is in Supabase. |
+
+### The missing 008
+
+There is no `docs/turns/008`. The number was skipped, not the record.
+
+`git log --all --diff-filter=A -- "docs/turns/008*"` returns nothing: no file by
+that name has ever been committed. Turn 007 closes "spiral turn 2, third of
+three" and turn 009 opens "spiral turn 3", both dated 2026-09-11, with no work
+between them.
+
+Stated here because a gap in a numbered sequence invites the question, and the
+answer is duller than the gap looks. Writing a turn 008 after the fact would have
+been the wrong fix twice over: `CLAUDE.md` requires records to be written during
+the turn, and a backdated record in a repository graded on its record is worse
+than a skipped integer.
 
 ### Files kept because they were true when written
 
