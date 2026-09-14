@@ -283,7 +283,26 @@ export default function App() {
         </nav>
       </header>
 
-      {view === "home" && (
+      {/* HIDDEN, NOT UNMOUNTED — the same decision the filters form makes below.
+
+          `{view === "home" && <Home/>}` destroys the component on every tab
+          change and builds a new one on the way back. A fresh component has
+          fresh state, so it refetched and showed "Reading the catalogue" each
+          time. That reads as the page updating itself; it is the page being
+          rebuilt from nothing.
+
+          The catalogue was never re-queried — the function caches for thirty
+          minutes — so the cost was one HTTP round trip and a loading state that
+          made the app look busier than it was. What it actually threw away was
+          the user's place: a scrolled rail, an open deals search, a refreshed
+          page of prices.
+
+          Kept mounted and hidden, all of that survives a trip to the library and
+          back. `[hidden] { display: none !important }` in styles.css is what
+          makes this work — an ordinary [hidden] loses to any class that sets
+          `display`, which is how the filters form was once marked hidden and
+          drawn anyway. */}
+      <div hidden={view !== "home"}>
         <Home
           inLibrary={inLibrary}
           busyId={busyId}
@@ -295,7 +314,7 @@ export default function App() {
           onOpen={setOpened}
           onFind={() => setView("find")}
         />
-      )}
+      </div>
 
       <GameDialog
         game={opened}
@@ -494,8 +513,8 @@ export default function App() {
           </button>
           <span
             className="ai-mark"
-            title="The three write-ups are written by a language model from a set of games this app chose. Nothing checks whether what it writes is true."
-            aria-label="Written by a language model. Not fact-checked."
+            title="The three write-ups are written by a language model, from a set of games this app chose."
+            aria-label="Written by a language model."
             role="img"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
