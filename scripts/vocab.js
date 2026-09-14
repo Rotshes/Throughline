@@ -116,7 +116,7 @@ export function buildRequest({ category = null, family = null, machines = [], ta
     throw new Error(
       `Not in the pinned tag vocabulary: ${badTags.join(", ")}\n` +
       `  A tag this product cannot offer is one the catalogue cannot be asked about.\n` +
-      `  Add it to data/tag-candidates.json and re-run scripts/pin-igdb-tags.js.`
+      `  Add it to data/tag-candidates.igdb.json and re-run scripts/pin-igdb-tags.js.`
     );
   }
 
