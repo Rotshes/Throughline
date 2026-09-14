@@ -13,6 +13,13 @@
   publish  = "web/dist"
   functions = "netlify/functions"
 
+# Pinned rather than inherited. package.json says engines >= 18, which is a floor
+# and not a choice: Netlify's default major moves on its own schedule, and a
+# build that silently changes runtime between deploys is a variable nobody set.
+# Five build credits a month is not enough to debug one of those.
+[build.environment]
+  NODE_VERSION = "22"
+
 # The pipeline reads its prompt, schema and the three pinned vocabularies from
 # disk at request time. Without these the bundled function would deploy cleanly
 # and then fail on the first request. See src/paths.js — and note that

@@ -2,6 +2,8 @@
 
 ASE-26 independent project. Roy Rotshes.
 
+**Live: https://lively-sunshine-79672b.netlify.app/**
+
 **The repository is the deliverable.** The course grades how well the agent was
 directed, not how good the app is. `docs/` is where the work is; `src/` is what
 came out of it.
