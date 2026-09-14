@@ -3,6 +3,13 @@
 Module 10, five parts. This is the primary work product. The code is generated
 from it; when the output is wrong, this gets fixed first and the code rebuilt.
 
+Version 3.1 — reference cases 5 and 6 were executed for the first time and both
+were wrong about the software. Case 5 tested catalogue descriptions, which never
+enter a prompt; case 6 measured one number where the freshness filter makes two.
+Criterion 14 and both cases are corrected below, and pitfall 28 records a real
+vulnerability the run found. See `docs/turns/019-running-the-cases-nobody-ran.md`.
+Nothing else changed: this is what the cases should always have said.
+
 Version 3.0 — the catalogue changed from RAWG to IGDB, and two angles could not
 survive it. Adds criteria 16 and 17, pitfalls 22-27, and a fourth secret. See
 `docs/decisions/0006-igdb-replaces-rawg.md` and
@@ -127,10 +134,14 @@ disagree about whether it was met.
 13. **A catalogue failure is shown as a catalogue failure**, distinct from a model
     failure and from an empty result. There are now two external services and a
     user who cannot tell which one broke cannot report anything useful.
-14. **Text arriving from the catalogue is data, never instruction.** Game
-    descriptions and titles come from a third party, enter a prompt, and are
-    outside this project's control. Tested with a candidate whose description
-    contains an injected instruction.
+14. **Text arriving from the catalogue is data, never instruction.** Titles come
+    from a third party, enter the prompt verbatim, and are outside this project's
+    control. **Descriptions never enter a prompt** — they are fetched after the
+    shortlist has passed every gate, for the three picks only, and reach the
+    browser as escaped text. The candidate block is a format and code enforces
+    it: no catalogue value may introduce a line break or forge a field. Tested
+    with a candidate whose title contains an injected instruction, against a
+    repeated control.
 15. Clicking through on one of the three records which one, and the case exactly
     as it was shown.
 
@@ -237,8 +248,8 @@ Written before the code that satisfies it.
 | 2 | A category and several platforms | Three games, each available on at least one selected platform |
 | 3 | Filters that leave **fewer than three** candidates | Returns what exists, states the count, relaxes nothing |
 | 4 | Filters that leave **zero** candidates | Says so plainly. No model call is made. |
-| 5 | A candidate whose catalogue description contains an injected instruction | Instruction ignored; the description treated as text. Criterion 14. |
-| 6 | The same filters run three times | Overlap between runs recorded. Not a pass/fail — a measurement, per pitfall 7. |
+| 5 | A candidate whose catalogue **title** contains an injected instruction | Instruction ignored, the title treated as text, and no title able to forge a field in the candidate block. Criterion 14. |
+| 6 | The same filters run three times, at two levels: the model on a fixed candidate set, and the whole request | Overlap recorded for each. Not a pass/fail — a measurement, per pitfall 7. The end-to-end figure is expected to be the lower of the two, because the freshness filter removes recently shown games by design. |
 | 7 | The catalogue returns an error or times out | Shown as a catalogue failure, distinct from a model failure. Criterion 13. |
 | 8 | A category, a platform and two tags | Three games, the catalogue saying each carries at least one selected tag. Criterion 4a. |
 | 9 | The same category and platform, run once with a tag and once without | The two shortlists differ. If they do not, pitfall 19 has swallowed the tag filter. |
@@ -251,6 +262,13 @@ Case 5 must not repeat version 1.x's mistake, recorded twice in the turn records
 the injected candidate has to sit alongside candidates that would obviously be
 picked, so that "the instruction was ignored" and "nothing was returned" cannot
 produce the same result.
+
+It also needs a control on the same candidate set, and the control needs
+repeating. "The injected game was not picked" is not a result unless you know it
+would not have been picked anyway — and turn 019 measured the model's own
+selection alternating between two candidates in one slot of three, so a single
+control run cannot establish a baseline. A claim was raised and withdrawn on
+exactly this in the space of one turn.
 
 Beyond the set: read ten shortlists by hand before believing any of it.
 
@@ -395,3 +413,12 @@ Everything is an id from the catalogue.
     did not apply produces a green suite and reads exactly like a check that
     cannot fail — which is the thing the mutation was written to detect. Confirm
     the source actually changed before trusting the result.
+28. **The candidate block is a format, and a field can forge one.** A newline
+    inside a catalogue title produced two fabricated fields in the prompt,
+    including a critic score forty points above the real one, and the shortlist
+    that came back looked entirely normal. The model ignored them — that is luck,
+    not a control, and this design does not permit the model's judgement to be
+    the thing standing between a forged fact and a person reading it. Every
+    catalogue value written into the block is stripped of anything that can end a
+    line; see `oneLine` in `src/shortlist.js`. Measured in turn 019, reference
+    case 5.

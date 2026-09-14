@@ -57,7 +57,7 @@ and nothing noticed **because nothing ran it.**
 
 Retargeted to the **title**, which is the attacker-controlled text that does
 reach the prompt. That was the user's decision; the specification correction is
-in section 8 awaiting approval.
+in section 8 and is applied — `docs/spec.md` is now v3.1.
 
 ### Case 6 would have measured the freshness filter
 
@@ -253,8 +253,10 @@ Distinguishing them takes a direct behavioural comparison, not reasoning.
 **A harness that edits a source file must be safe at every line**, not merely
 correct when it finishes.
 
-All four belong in `docs/failures.md` and are **drafted below, awaiting the
-user's go-ahead**, since `docs/` outside `docs/turns/` is his.
+All four are now in `docs/failures.md` as entries 25 to 28, applied with the
+user's go-ahead at the end of this turn. `CLAUDE.md`'s count was stale again —
+twenty-four against twenty-eight — which turn 018 predicted in the sentence that
+corrected it the last time.
 
 ### Open, carried forward
 
@@ -266,9 +268,11 @@ user's go-ahead**, since `docs/` outside `docs/turns/` is his.
   question to be asked of this project. Considered-and-declined, with the IGDB
   licence position on storing their data as the blocker, is the honest shape.
 
-## 8. Proposed corrections to `docs/spec.md` — awaiting approval
+## 8. Corrections to `docs/spec.md` — applied
 
-Not applied. The specification is the user's.
+Approved by the user at the end of this turn; `docs/spec.md` is now v3.1. Both
+reference cases were wrong about the software, and the corrections are recorded
+here in full so the diff is legible rather than archaeological.
 
 **Part 4, case 5** — currently:
 
@@ -307,7 +311,7 @@ Proposed:
 
 > 28. **The candidate block is a format, and a field can forge one.** A newline inside a catalogue title produced two fabricated fields in the prompt, including a critic score forty points above the real one, and the shortlist that came back looked entirely normal. The model ignored it; that is luck, not a control. Every catalogue value written into the block is stripped of anything that can end a line — see `oneLine` in `src/shortlist.js`. Measured in turn 019, reference case 5.
 
-## 9. Proposed additions to `docs/failures.md` — awaiting approval
+## 9. Additions to `docs/failures.md` — applied as entries 25 to 28
 
 > * **An unrun test case can be wrong indefinitely, and nothing about it looks
 >   wrong.** Reference case 5 tested catalogue descriptions for prompt injection.

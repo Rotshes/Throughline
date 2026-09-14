@@ -125,3 +125,29 @@ cut; it moved. This is where most of the value in that file was.
   one was the claim being made. Fifth appearance of turn 001's rule, and the
   first in a file this project had not been treating as code — `scripts/check-css.js`
   exists because a stylesheet fails silently by construction. (Turn 018)
+
+* **An unrun test case can be wrong indefinitely, and nothing about it looks
+  wrong.** Reference case 5 tested catalogue descriptions for prompt injection.
+  Descriptions never enter a prompt in this design and never did, under either
+  catalogue. The case survived being written, reviewed and carried through a
+  whole migration because executing it was the one thing nobody did. A test is a
+  sentence until it runs. (Turn 019)
+* **A check on the separator count tests the separator, not the format.** Three
+  checks were written against titles carrying control characters and two of them
+  could not fail: they asserted `split("\n").length`, and a carriage return does
+  not produce a newline. A mutation stripping only `\n` passed all sixty-seven.
+  Written one hour after failure 24, by the same author. Counting the separators
+  tested the separators; testing the format meant looking for the characters.
+  (Turn 019)
+* **A mutation that changes nothing looks exactly like a check that cannot
+  fail.** A harness reported a false pass; the two regexes turned out to be
+  equivalent, because JavaScript's `\s` already matches `\r`, U+2028 and U+2029.
+  The two readings point opposite ways — fix the checks, or note the redundancy —
+  and only a direct behavioural comparison separates them. Label a known no-op,
+  or the harness cries wolf every run and is not believed on the run that
+  matters. (Turn 019)
+* **A harness that edits a source file must be safe at every line.** The mutation
+  runner hardcoded `/tmp`, which is not a path on Windows, and died. It was
+  harmless only because the failing copy was its first statement; as its last, it
+  would have left a mutated source on disk under a success message. Restores are
+  verified byte for byte, not announced. (Turn 019)

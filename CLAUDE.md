@@ -29,7 +29,7 @@ three specific titles with images and a written case for each.
 Coursework for ASE-26. The course grades how well the agent is directed, not the
 app. The written record in this repository is the deliverable.
 
-Read `docs/spec.md` before doing anything. It is the authority. It is at v3.0;
+Read `docs/spec.md` before doing anything. It is the authority. It is at v3.1;
 v1.x described a different product and `docs/decisions/0003` says why it changed.
 v2.x described the same product on a different catalogue — `docs/decisions/0006`.
 
@@ -125,23 +125,24 @@ disagree about whether it was met.
 and could not is not a gate.
 * The model produces three choices and three arguments. Code decides whether any
 of it is acceptable. No judgement about correctness happens in the browser.
-* Slow, failed and empty states are part of the design. There are now two
-external services, and a user who cannot tell which one broke cannot report
-anything useful.
+* Slow, failed and empty states are part of the design. There are three external
+services, and a user who cannot tell which one broke cannot report anything
+useful.
 * Documentation says why, not only what. You can read the code; you cannot know
 why I chose it. Ask.
 
 ## Failures seen before
 
-Twenty-four of them, in `docs/failures.md`. **Read it before writing code.**
+Twenty-eight of them, in `docs/failures.md`. **Read it before writing code.**
 
 They moved out of this file in turn 016, when it passed 250 lines against the 200
 the course asks for. Nothing was cut. The four that come up most often:
 
 * A gate can pass for the wrong reason — ask what a pass would look like if the
-  thing being tested had failed. Five times now: 001, 004, 014, 017, 018. It is
-  the most expensive line in this project and writing it down has never once
-  been enough to prevent the next one.
+  thing being tested had failed. Six times now: 001, 004, 014, 017, 018, 019.
+  It is the most expensive line in this project, and writing it down has never
+  once been enough to prevent the next one — in 019 two checks written FOR this
+  failure fell into it. Guards in code have a better record than rules in files.
 * An ignored query parameter looks exactly like a working one. So does a filter
   on a field that has been renamed. (Turns 005, 016 and 018 — three renames.)
 * A stale artifact looks exactly like a fresh one. (Turns 001 and 009.)
