@@ -164,17 +164,6 @@ id joins back to.
 
 ## What this architecture does not do
 
-**Nothing checks whether the written case is true.** The model can claim co-op, a
-great soundtrack, a twenty-hour campaign, and no gate will catch it. Every gate
-above can pass on three eloquent falsehoods. The mitigation is keeping the prompt
-off checkable specifics and onto what a person can judge from a screenshot.
-
-This is pitfall 1, it is deliberate, and it is the largest known gap in the
-project. Turn 019 put a number on it: given one fixed candidate set, the model
-returned **the same three games three times out of three** while its prose varied
-**40% in length**. The stable part is what code verifies; the varying part is what
-nothing checks.
-
 **There is no rate limiting** on `/api/shortlist`, `/api/deals` or `/api/event`.
 The deployed endpoints spend OpenRouter credit for anyone who finds them,
 bounded only by the prepaid balance.

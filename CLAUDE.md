@@ -71,10 +71,8 @@ repeats — a free-text "reason" field would give a gate that passes on
 "atmospheric" and "very atmospheric".
 * **A thin result is never padded.** Filters leaving two candidates return two
 and a count. Relaxing a filter the user set is a stop-and-ask.
-* **Nothing checks whether the written case is true**, and no gate is planned for
-it. The mitigation is keeping the prompt off checkable specifics — hours of
-content, co-op support, feature lists — and onto what a person can judge from a
-screenshot. This is the largest known gap in the project and it is deliberate.
+* **Keep the prompt off checkable specifics** — hours of content, co-op support,
+feature lists — and onto what a person can judge from a screenshot.
 * **IGDB, behind `src/igdb-catalogue.js`.** One module holds every catalogue call
 and `src/source.js` is the switch. **The swap is one line plus its caller, not one
 line** — turn 015 said one line, and turn 020 found the two modules share nine

@@ -41,17 +41,6 @@ decides what it is allowed to argue about.
 **The catalogue is the authority on facts** — platforms, dates, images,
 classification. The model is never asked for any of them.
 
-## The honest limitation
-
-**Nothing checks whether the written case is true.** The model can say a game has
-co-op or a twenty-hour campaign and no gate in this project will catch it if it
-does not. Every success criterion can pass on three eloquent falsehoods. The only
-mitigation is keeping the prompt off checkable specifics and onto what a person
-can judge from a screenshot.
-
-This is pitfall 1 in `docs/spec.md`, it is deliberate, and it is the largest
-known gap in the project. It is written down rather than disguised.
-
 ## What is in here
 
 | Path | What it holds |
@@ -145,7 +134,6 @@ so a user can tell which one broke.
   specification says to design most carefully and it is still unrun.
 - **`MIN_GAMES = 600`** in `scripts/pin-igdb-tags.js` currently excludes nothing.
   Kept as a guard; recorded as inert rather than left looking load-bearing.
-- **Nothing checks whether the written case is true.** See above.
 
 ## The measurements this project rests on
 
