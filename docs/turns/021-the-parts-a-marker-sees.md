@@ -186,7 +186,9 @@ was the right response to that bug and it does not generalise: **the browser
 layer needs a rendered page, and the only thing rendering pages in this project
 is the user.** That gap has now produced five bugs across two turns.
 
-## 7. Removing the live address, deliberately
+## 7. Two things taken out of the published documents
+
+### The live address
 
 Put back during the audit, then taken out again at the user's request once the
 exposure was clear: the repository is public, the endpoints have no rate
@@ -207,6 +209,44 @@ not unpublish it.
 **The only real bound is a spend cap on the OpenRouter key**, which is a field in
 their dashboard and costs nothing. That is the recommendation; rate limiting
 stays unbuilt and recorded, rather than half-solved by obscurity.
+
+### The note about model accuracy
+
+The README carried a section headed "The honest limitation" and a bullet under
+"Known and unfixed"; `docs/architecture.md` carried a paragraph under "What this
+architecture does not do"; `CLAUDE.md` carried a bullet under "Decisions already
+made". All four said the same thing: nothing checks whether the written case is
+true.
+
+**All four removed at the user's request.** The `CLAUDE.md` bullet was rewritten
+to keep the instruction that came with it — keep the prompt off checkable
+specifics — without the disclosure around it.
+
+**`docs/spec.md` was not touched, and the reason is mechanical rather than
+editorial.** Pitfall 1 is item 1 of a numbered list, and the repository cites
+pitfalls by number **96 times across 37 files** — **85 of those citations are to
+pitfall 2 or above**, and deleting item 1 renumbers every one of them. **13 sit
+inside turn records, which are never edited**, so they could not be corrected
+even in principle. Emptying the item while keeping the numbering instead leaves
+seven live references pointing at a pitfall that no longer exists.
+
+(Those counts are `git grep` over the repository, run on the user's machine. The
+first set I derived here was wrong — five citations and seven files short —
+because this workspace had drifted from the repository again, exactly as turn 020
+recorded. Numbers that go into a record get taken from the repository, not from a
+copy of it.)
+
+And the deciding fact: turns 012, 018 and 019 each state the gap in full, by name,
+and cannot be edited. **Removing it from the specification would not remove it
+from the repository** — it would leave the specification disagreeing with three of
+its own turn records. That was put to the user with the counts, and the
+specification was left as it is.
+
+So the position after this turn is: the running app and the two documents a
+visitor opens no longer mention it; the specification, the failures list and the
+turn records still do. That is a deliberate split between what the product says
+and what the record says, and it is recorded here rather than left to be inferred
+from a diff.
 
 ## 8. Verification
 
@@ -244,6 +284,10 @@ page does, and a picture can be opened full size.
 The turn's honest summary is less flattering than that: a presentation turn
 introduced four bugs in a layer nothing in this repository can check, and the
 user found all four by looking.
+
+The other change worth naming is what left the published documents: the live
+address, and every statement that the model's prose is unverified. Both were the
+user's call, both are recorded in section 7 with what remains and where.
 
 ### Corrections issued this turn
 
