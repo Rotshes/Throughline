@@ -465,11 +465,46 @@ export default function App() {
           {tags.length >= MAX_TAGS && <p className="hint warn">Six at most.</p>}
         </fieldset>
 
-        <button type="submit" className="go" disabled={!canSubmit}>
-          {/* Not "find me three": the count is not promised. A thin filter can
-              legitimately return one, and criterion 5 forbids padding it. */}
-          {state.status === "waiting" ? "Looking…" : "Find me games to play"}
-        </button>
+        {/* THE AI MARKER.
+
+            Next to the control that triggers the model call, because that is
+            the moment the information is worth something.
+
+            NO VENDOR LOGO, deliberately. Two reasons, and the second is the one
+            that would have bitten:
+
+              A Gemini or OpenRouter mark is somebody else's trademark and
+              implies a partnership this project does not have.
+
+              `OPENROUTER_MODEL` is an environment variable precisely because
+              model ids go stale — see .env.example. A logo naming one model
+              becomes a false claim the moment that variable changes, in the most
+              visible place in the app. A generic glyph stays true.
+
+            The icon carries no visible text, which is the user's choice. So the
+            meaning is attached where it can still be reached: `title` on hover,
+            `aria-label` for screen readers. An unlabelled decoration nobody can
+            decode would be worse than nothing — it would look like disclosure
+            without being any. */}
+        <div className="go-row">
+          <button type="submit" className="go" disabled={!canSubmit}>
+            {/* Not "find me three": the count is not promised. A thin filter can
+                legitimately return one, and criterion 5 forbids padding it. */}
+            {state.status === "waiting" ? "Looking…" : "Find me games to play"}
+          </button>
+          <span
+            className="ai-mark"
+            title="The three write-ups are written by a language model from a set of games this app chose. Nothing checks whether what it writes is true."
+            aria-label="Written by a language model. Not fact-checked."
+            role="img"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              {/* A four-point sparkle. Generic enough to belong to nobody. */}
+              <path d="M12 2.5 13.9 9.1 20.5 11 13.9 12.9 12 19.5 10.1 12.9 3.5 11 10.1 9.1z" />
+              <path d="M18.5 2.5 19.3 5.2 22 6 19.3 6.8 18.5 9.5 17.7 6.8 15 6 17.7 5.2z" />
+            </svg>
+          </span>
+        </div>
       </form>
 
       {/* Shown only while the find page is otherwise empty. Once there is a
