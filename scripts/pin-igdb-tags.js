@@ -42,12 +42,31 @@ const EXCLUDED = ["erotic"];
 /**
  * Below this, a term is a dropdown entry that leads nowhere.
  *
- * 1,000 is roughly 0.3% of the catalogue. `4x-explore-expand-exploit-and-
- * exterminate` at 686 and `auditory` at 1,109 sit either side of it, which is
- * the right place for a line: one is a genuine niche somebody might want, the
- * other is a category almost nobody is searching for by name.
+ * LOWERED FROM 1,000 TO 600 IN TURN 020.
+ *
+ * The original reasoning read well and was wrong about its own purpose. It
+ * justified 1,000 by pointing at `auditory` (1,109) on one side and
+ * `4x-explore-expand-exploit-and-exterminate` (686) on the other, and called
+ * that "the right place for a line" — while saying in the same breath that the
+ * 4X entry is "a genuine niche somebody might want". The line was drawn to
+ * exclude a tag the prose argued for keeping.
+ *
+ * What it actually excluded: `battle-royale` at 708 and `4x` at 686. Neither is
+ * a term nobody searches for. Both are exactly the kind of thing a person types
+ * into a box like this one.
+ *
+ * 600 is not a better-reasoned number than 1,000 — it is a threshold chosen to
+ * admit two tags that were wrongly excluded, and it is recorded as that rather
+ * than dressed up. The real rule is the one this project keeps relearning:
+ * **a threshold carried into a context where its reason does not hold is a bug
+ * with a good name** (pitfall 24, failure 13, turn 013). This one was not even
+ * carried; it disagreed with its own justification on the day it was written.
+ *
+ * What still gets dropped at 600 is worth reading in the script's own output
+ * before the file is committed. The point of printing it is that the line is a
+ * judgement, and a judgement nobody looks at is a default.
  */
-const MIN_GAMES = 1000;
+const MIN_GAMES = 600;
 
 const facets = [];
 const dropped = [];

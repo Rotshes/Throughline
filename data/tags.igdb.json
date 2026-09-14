@@ -1,6 +1,6 @@
 {
   "source": "igdb",
-  "pinnedAt": "2026-09-13T03:11:11.696Z",
+  "pinnedAt": "2026-09-14T00:51:50.733Z",
   "facets": [
     {
       "id": "theme",
@@ -126,6 +126,12 @@
           "slug": "stealth",
           "name": "Stealth",
           "games": 2182
+        },
+        {
+          "id": 41,
+          "slug": "4x-explore-expand-exploit-and-exterminate",
+          "name": "4X (explore, expand, exploit, and exterminate)",
+          "games": 686
         }
       ]
     },
@@ -163,6 +169,12 @@
           "slug": "split-screen",
           "name": "Split screen",
           "games": 4800
+        },
+        {
+          "id": 6,
+          "slug": "battle-royale",
+          "name": "Battle Royale",
+          "games": 708
         }
       ]
     },
