@@ -38,7 +38,9 @@
     "check:events": "node scripts/check-events.js",
     "check:suggested": "node scripts/check-suggested.js",
     "probe:reviews": "node scripts/probe-reviews.js",
-    "check:css": "node scripts/check-css.js"
+    "check:css": "node scripts/check-css.js",
+    "case:5": "node scripts/case-5-injection.js",
+    "case:6": "node scripts/case-6-repeatability.js"
   },
   "engines": {
     "node": ">=18"
