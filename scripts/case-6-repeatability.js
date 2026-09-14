@@ -45,7 +45,7 @@
 
 import "dotenv/config";
 import { assembleCandidates } from "../src/source.js";
-import { buildRequest, describeVocabulary } from "./case-vocab.js";
+import { buildRequest, describeVocabulary } from "./vocab.js";
 import { shortlist } from "../src/shortlist.js";
 import { runRequest } from "../src/pipeline.js";
 import { createBudget } from "../src/budget.js";
@@ -55,7 +55,7 @@ import { config } from "../src/config.js";
 const RUNS = 3;
 
 // Resolved from the pinned vocabularies, never typed from memory. See
-// case-vocab.js — two platform slugs written from memory have already been
+// vocab.js — two platform slugs written from memory have already been
 // wrong once in this project.
 //
 // The default below was `role-playing-game-rpg` on the first run and the

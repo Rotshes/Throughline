@@ -2,11 +2,35 @@
  * Which catalogue this app is using. THE SWITCH IS THIS FILE.
  *
  * `src/catalogue.js` (RAWG) and `src/igdb-catalogue.js` (IGDB) export the same
- * surface: `assembleCandidates`, `countFor`, `toCandidate`, `usable`,
+ * NINE NAMES: `assembleCandidates`, `countFor`, `toCandidate`, `usable`,
  * `excludePlayed`, `rankByTagMatch`, `dominanceReport`, `fetchDescription`,
- * `SOURCE`. Everything else in the project imports from here rather than from
- * either of them, so changing catalogues is one line and one decision record,
- * which is what turn 005 put every catalogue call in one file to buy.
+ * `SOURCE`.
+ *
+ * TWO CORRECTIONS, BOTH FROM TURN 020.
+ *
+ * **"Everything else imports from here" was false for five turns.**
+ * `scripts/run-shortlist.js` and `scripts/run-candidates.js` imported
+ * `src/catalogue.js` directly and read the RAWG vocabularies, through the
+ * migration and four turns after it. They did not break. With a RAWG key in the
+ * environment they answered cheerfully from a catalogue the product no longer
+ * uses, which is how the sentence above stayed in this file while being untrue.
+ * A claim about what every file does is a claim that has to be checked against
+ * every file, and nothing was checking.
+ *
+ * **The same nine names are not the same contract.** `assembleCandidates` takes
+ * `platformIds`, `specific` and `vocabulary` in the RAWG module, and
+ * `machineSlugs` and `libraryEntries` here. So the swap is one line only in the
+ * direction it was taken: `src/pipeline.js` was rewritten to this contract in
+ * the same commit, and flipping the line back would need it rewritten again.
+ *
+ * The saving grace, and it was measured rather than assumed: both modules
+ * validate. RAWG's `buildPoolQuery` throws on a missing `platformIds`, and an
+ * empty `machineSlugs` here resolves to no platform ids and hits the same
+ * refusal. A mis-shaped call fails loudly instead of quietly returning games
+ * filtered by nothing.
+ *
+ * What turn 005 actually bought, stated honestly: every catalogue call lives in
+ * one file, the diff for a swap is legible, and the caller changes with it.
  *
  * The point of routing through a file that does nothing is that the diff for a
  * catalogue swap is legible. A commit that changes this line says what happened;

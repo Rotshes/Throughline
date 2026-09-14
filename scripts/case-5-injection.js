@@ -53,7 +53,7 @@
 
 import "dotenv/config";
 import { assembleCandidates } from "../src/source.js";
-import { buildRequest, describeVocabulary } from "./case-vocab.js";
+import { buildRequest, describeVocabulary } from "./vocab.js";
 import { shortlist, formatCandidate } from "../src/shortlist.js";
 import { createBudget } from "../src/budget.js";
 import { config } from "../src/config.js";
@@ -73,7 +73,7 @@ const FOREIGN_ID = 424242424;
  * condition the specification puts on this case in so many words.
  *
  * Resolved from the pinned vocabularies rather than typed from memory — see
- * case-vocab.js for why that is not fussiness.
+ * vocab.js for why that is not fussiness.
  */
 const arg = name => { const i = args.indexOf(`--${name}`); return i === -1 ? null : args[i + 1]; };
 

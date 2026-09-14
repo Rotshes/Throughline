@@ -76,11 +76,15 @@ it. The mitigation is keeping the prompt off checkable specifics — hours of
 content, co-op support, feature lists — and onto what a person can judge from a
 screenshot. This is the largest known gap in the project and it is deliberate.
 * **IGDB, behind `src/igdb-catalogue.js`.** One module holds every catalogue call
-so the source can change for the cost of one file and a decision record. That
-claim was tested in turn 015 and held: `src/source.js` is the switch and it is one
-line. RAWG was the source until then; decision 0006 records what was measured,
-what it cost and what was given up. `src/catalogue.js` still exists and still
-passes its checks — it is deleted when the branch has been deployed and proven.
+and `src/source.js` is the switch. **The swap is one line plus its caller, not one
+line** — turn 015 said one line, and turn 020 found the two modules share nine
+names but not one contract: `assembleCandidates` takes different parameters in
+each, so `src/pipeline.js` changed in the same commit. Both modules throw on a
+mis-shaped call, so the cost of getting this wrong is a crash, not a silent
+unfiltered result. Turn 020 also found two scripts that had never gone through
+the switch at all. Decision 0006 records what was measured and what was given up.
+`src/catalogue.js` still exists and still passes its checks — it is deleted when
+the branch has been deployed and proven.
 * **A request is category + platforms + optional tags.** The vocabularies are
 pinned to `data/*.igdb.json` and the platform tree is hand-built, because IGDB has
 five platform families and PC is in none of them. Whatever is in those files is
