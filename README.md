@@ -2,7 +2,11 @@
 
 ASE-26 independent project. Roy Rotshes.
 
-**Live: https://lively-sunshine-79672b.netlify.app/**
+The deployed address is not published here. This repository is public, the
+endpoints behind that address have no rate limiting, and each shortlist spends
+real credit — so advertising the URL in the one file every visitor opens would
+be publishing a way to spend somebody else's money. It is sent directly to the
+people who need it.
 
 **The repository is the deliverable.** The course grades how well the agent was
 directed, not how good the app is. `docs/` is where the work is; `src/` is what
