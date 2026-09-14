@@ -323,6 +323,143 @@ select:focus-visible,
 
 .go:active:not(:disabled) { transform: translateY(0) scale(0.995); }
 
+/* ---------- opening a picture full size ---------- */
+
+/* The whole frame is the target. An icon in a corner would be a smaller thing to
+   hit and would say the rest of the picture is not clickable, which is not true.
+   Transparent until hovered, so it never sits on top of the artwork. */
+.frame-zoom {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+}
+
+.frame-zoom-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  font-size: 14px;
+  line-height: 1;
+  color: #fff;
+  background: rgba(16, 17, 26, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  opacity: 0;
+  transition: opacity 0.16s var(--ease);
+}
+
+.frame-zoom:hover .frame-zoom-badge,
+.frame-zoom:focus-visible .frame-zoom-badge { opacity: 1; }
+.frame-zoom:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* The dialog is a transparent shell; the picture is the thing that has a shape.
+   `max-width` and `max-height` in viewport units rather than pixels, because the
+   point of this is to be as big as the screen allows. */
+.lightbox {
+  max-width: 100vw;
+  max-height: 100vh;
+  width: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.lightbox::backdrop {
+  background: rgba(8, 9, 14, 0.86);
+  backdrop-filter: blur(3px);
+}
+
+.lightbox[open] { animation: sheet-in 0.2s var(--ease) both; }
+.lightbox[open]::backdrop { animation: fade-in 0.2s var(--ease) both; }
+
+.lightbox-figure {
+  position: relative;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.lightbox-figure > img {
+  display: block;
+  max-width: min(1400px, 94vw);
+  max-height: 86vh;
+  width: auto;
+  height: auto;
+  border-radius: var(--radius-sm);
+  /* Box art and screenshots are different shapes and both are shown whole here.
+     This is the one place in the app with no fixed frame to fit. */
+  object-fit: contain;
+  background: #0b0c12;
+}
+
+.lightbox-figure figcaption {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.lightbox-close,
+.lightbox-step {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  color: #fff;
+  background: rgba(16, 17, 26, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.16s var(--ease);
+}
+
+.lightbox-close:hover,
+.lightbox-step:hover { background: rgba(16, 17, 26, 0.95); }
+
+.lightbox-close:focus-visible,
+.lightbox-step:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+.lightbox-close {
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
+}
+
+.lightbox-step {
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 56px;
+  font-size: 26px;
+  line-height: 1;
+  padding-bottom: 4px;
+}
+
+.lightbox-step.prev { left: 10px; }
+.lightbox-step.next { right: 10px; }
+
+/* On a phone the arrows would sit on top of the picture in the only space it
+   has. Below it instead, where they are also easier to reach with a thumb. */
+@media (max-width: 560px) {
+  .lightbox-step { top: auto; bottom: -6px; transform: none; width: 44px; height: 38px; font-size: 22px; }
+  .lightbox-step.prev { left: 16px; }
+  .lightbox-step.next { right: 16px; }
+  .lightbox-figure figcaption { padding-bottom: 34px; }
+}
+
 /* ---------- the AI marker ---------- */
 
 /* The submit button was a block; it now shares a row with the glyph. `flex: 1`
@@ -473,18 +610,37 @@ select:focus-visible,
   animation: fade 0.3s var(--ease);
 }
 
+/* EVERY TILE VISIBLE, NO SCROLLBAR.
+ *
+ * Was a flex row with `overflow-x: auto`. Two problems, and the second was
+ * caused by the first:
+ *
+ *   A game can carry eighteen screenshots — nothing caps them — so the row ran
+ *   off the side and put a scrollbar under the card. Pictures you cannot see
+ *   are pictures you will not click.
+ *
+ *   `overflow` clips at the element's box, and `.thumb.on` draws its selection
+ *   outline 2px OUTSIDE that box. So the outline on the selected tile was cut
+ *   off top and bottom. It looked like a misaligned border; it was a clipped
+ *   one.
+ *
+ * A grid with `auto-fill` wraps instead of scrolling: the tiles size themselves
+ * to fill the width, as many per row as fit, and the rows keep coming. Nothing
+ * overflows, so nothing clips, so the outline is whole.
+ */
 .strip {
-  display: flex;
-  gap: 7px;
-  margin-top: 7px;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  padding-bottom: 2px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  /* 9 rather than 7: the selection outline reaches 4px past its tile (2px wide,
+     2px offset), and a 7px gap left it almost touching the neighbour. */
+  gap: 9px;
+  margin-top: 9px;
 }
 
 .thumb {
-  flex: 0 0 auto;
-  width: 78px;
+  /* No width and no flex basis: the grid track decides how wide a tile is, so
+     tiles grow to use the card's full width instead of leaving a ragged edge. */
+  width: 100%;
   padding: 0;
   border: 0;
   border-radius: 7px;
@@ -499,6 +655,12 @@ select:focus-visible,
 .thumb:hover { opacity: 0.8; }
 .thumb.on { opacity: 1; outline-color: var(--accent); }
 
+.thumb {
+  /* The play badge is positioned against this. It was a plain button before the
+     strip carried anything but screenshots. */
+  position: relative;
+}
+
 .thumb img {
   display: block;
   width: 100%;
@@ -507,6 +669,73 @@ select:focus-visible,
   border-radius: 7px;
   background: var(--sunk);
 }
+
+/* Box art is portrait and the tile is 16:9. `cover` would crop a tall picture
+   through its middle — which is exactly how a cat's face went missing from
+   Stray's card during the IGDB migration.
+
+   Contained, it leaves transparent bars either side, and `.thumb.on`'s outline
+   traces the tile rather than the artwork — an outline that reads as
+   misaligned. The wash below fills the bars so the outline has a solid
+   rectangle to sit around. */
+.thumb.cover-thumb img {
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
+}
+
+.thumb.cover-thumb img.thumb-wash {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  object-fit: cover;
+  /* Less blur than the big frame: at 78 pixels wide, the frame's 26px would
+     smear the whole tile into one colour and lose the edge that tells you where
+     the artwork stops. */
+  filter: blur(7px) saturate(1.3) brightness(0.5);
+  transform: scale(1.3);
+}
+
+/* ---------- the play badge on a video tile ---------- */
+
+/* A trailer still is a picture until something says otherwise. This is the
+   something.
+
+   Centred, circular, and drawn over the image rather than beside it, because a
+   badge outside the tile would shift the row's rhythm and read as a caption.
+   `pointer-events: none` so the whole tile stays one click target — the badge
+   is a sign, not a second button. */
+.thumb-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-size: 13px;
+  line-height: 1;
+  color: #fff;
+  /* Its own dark disc rather than a wash over the whole tile: a full-tile scrim
+     dims the picture, and the picture is the thing being chosen between. */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.thumb-play::before {
+  content: "";
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(12, 12, 18, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+/* The glyph sits above its own disc. */
+.thumb-play { z-index: 1; }
+.thumb-play::before { z-index: -1; }
 
 /* ---------- the two texts ----------
    The case is written by a language model and nothing checks it. The synopsis
@@ -1467,8 +1696,23 @@ main.wide { max-width: 1040px; }
 
 .sheet-art { position: relative; }
 
+/* THE FRAME IS A THREE-LAYER STACK. Change one and check the other two.
+ *
+ *   0  .frame-wash   the blurred fill behind box art
+ *   1  the picture   raised so it paints over the wash
+ *   2  .sheet-play   this button
+ *
+ * It became a stack when the wash was added, and this button had no z-index at
+ * the time. An absolutely positioned element with `z-index: auto` loses to a
+ * sibling with `z-index: 1`, so the picture painted over the button: the trailer
+ * control vanished and its clicks went to the image behind it. Nothing threw and
+ * nothing looked broken — the frame just showed a still that would not play.
+ *
+ * A stacking bug reports itself as "the button does nothing", which is the same
+ * thing a dead handler reports. */
 .sheet-play {
   position: absolute;
+  z-index: 2;
   left: 50%;
   bottom: 16px;
   transform: translateX(-50%);
@@ -1520,6 +1764,48 @@ main.wide { max-width: 1040px; }
   width: 100%;
   aspect-ratio: 16 / 9;
   animation: fade 0.3s var(--ease);
+  /* Positioned so it paints above the blurred wash. An absolutely positioned
+     sibling would otherwise sit on top of a static one whatever the source
+     order says. */
+  position: relative;
+  z-index: 1;
+}
+
+/* The blurred fill behind box art. Deliberately `cover` — this copy is MEANT to
+   be cropped; it is a colour field, not a picture. The scale hides the soft
+   transparent edge that blur leaves at the element's bounds, and the brightness
+   drop keeps it from competing with the sharp copy in front of it. */
+.gallery > .gallery-frame > img.frame-wash {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  object-fit: cover;
+  filter: blur(26px) saturate(1.3) brightness(0.5);
+  transform: scale(1.25);
+  animation: none;
+}
+
+/* The trailer still fills the frame rather than being letterboxed into it.
+   `cover` is the safe choice in both cases, which is why it is used despite the
+   reason for it being UNVERIFIED:
+
+     believed — YouTube's `hqdefault.jpg` is 480x360, a 4:3 image with black
+     bars baked into it for a 16:9 video. Letterboxing that into a 16:9 frame
+     would show two sets of bars, theirs and ours; `cover` crops theirs away.
+
+     not checked — img.youtube.com is unreachable from the environment this was
+     written in, so the dimensions above come from memory, not from the file.
+     If the still is already 16:9, `cover` and `contain` render it identically
+     and this rule costs nothing.
+
+   Stated as a belief because a comment claiming a measurement nobody took is
+   the kind of thing this project writes into docs/failures.md. Open a still at
+   https://img.youtube.com/vi/<id>/hqdefault.jpg to settle it. */
+.gallery > .gallery-frame > img.frame-poster {
+  object-fit: cover;
 }
 
 .gallery-video {

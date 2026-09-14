@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   requestShortlist, recordClick, fetchSuggested,
   fetchLibrary, saveToLibrary, removeFromLibrary,
@@ -778,12 +778,60 @@ function Diagnosis({ diagnosis, narrowed, usedTags }) {
   );
 }
 
+/**
+ * The eleven-character id out of a YouTube embed URL, or null.
+ *
+ * The URL was built server-side by `youTubeUrl`, which already checked the id
+ * against YouTube's alphabet before it could reach an iframe. This re-checks
+ * rather than trusting that, because the value originates with IGDB and is about
+ * to be interpolated into an <img src>. A third party's string gets validated at
+ * every boundary it crosses, not once.
+ */
+function youTubeId(embedUrl) {
+  if (typeof embedUrl !== "string") return null;
+  const m = embedUrl.match(/\/embed\/([A-Za-z0-9_-]{11})(?:[?#]|$)/);
+  return m ? m[1] : null;
+}
+
 function Pick({ pick, index, chosen, status, busy, onChoose, onRemove }) {
-  const shots = useMemo(() => {
-    // The main image IS the first screenshot now, so this dedupe does real work
-    // rather than guarding an edge case.
-    const all = [pick.image, ...(pick.screenshots ?? [])].filter(Boolean);
-    return [...new Set(all)];
+  /**
+   * What the gallery shows, in order: cover art, then the trailer, then
+   * screenshots.
+   *
+   * The cover leads because it is how the game is recognised — it is the image
+   * on a shelf, on a store page, on the back of somebody's memory. A screenshot
+   * of a corridor is a worse first frame than the box art, however pretty.
+   *
+   * The trailer sits second rather than being hidden behind a button on the
+   * first slide, which is where it used to live and where it was easy to miss.
+   *
+   * A video slide needs a still to sit in the strip. YouTube serves one per
+   * video id, which is more honest than borrowing a screenshot — a screenshot
+   * with a play badge on it promises a video of something it is not a frame of.
+   */
+  const slides = useMemo(() => {
+    const out = [];
+    const seen = new Set();
+
+    if (pick.cover) { out.push({ kind: "cover", src: pick.cover }); seen.add(pick.cover); }
+
+    const vid = youTubeId(pick.video);
+    if (vid) {
+      out.push({
+        kind: "video",
+        src: `https://img.youtube.com/vi/${vid}/hqdefault.jpg`,
+        embed: pick.video,
+      });
+    }
+
+    // `pick.image` is the first screenshot for most games and the cover for the
+    // few with no screenshots at all, so the dedupe does real work here.
+    for (const src of [pick.image, ...(pick.screenshots ?? [])]) {
+      if (!src || seen.has(src)) continue;
+      seen.add(src);
+      out.push({ kind: "shot", src });
+    }
+    return out;
   }, [pick]);
 
   const [shown, setShown] = useState(0);
@@ -791,6 +839,45 @@ function Pick({ pick, index, chosen, status, busy, onChoose, onRemove }) {
   // preloaded: three embedded players loading at once on a page of three
   // recommendations is a page nobody waits for.
   const [playing, setPlaying] = useState(false);
+
+  const current = slides[shown] ?? null;
+
+  /**
+   * The picture opened full size, as an index into `slides`, or null.
+   *
+   * A trailer is never zoomed — its slide already has an action, and enlarging a
+   * still of a video is the wrong answer to clicking it. So the lightbox holds
+   * the cover and the screenshots, and stepping through it skips the video
+   * rather than showing a picture that does nothing.
+   */
+  const [zoom, setZoom] = useState(null);
+  const zoomRef = useRef(null);
+
+  const zoomable = useMemo(
+    () => slides.map((s, i) => (s.kind === "video" ? -1 : i)).filter(i => i >= 0),
+    [slides]
+  );
+
+  const step = dir => {
+    setZoom(z => {
+      const at = zoomable.indexOf(z);
+      if (at === -1) return z;
+      // Wraps. With three screenshots, refusing to move at the end is a control
+      // that looks broken rather than one that is finished.
+      const next = (at + dir + zoomable.length) % zoomable.length;
+      return zoomable[next];
+    });
+  };
+
+  // The same native <dialog> the game panel uses: focus trapping, an inert
+  // background, Escape, and ::backdrop all come from the element rather than
+  // being re-implemented.
+  useEffect(() => {
+    const el = zoomRef.current;
+    if (!el) return;
+    if (zoom !== null && !el.open) el.showModal();
+    if (zoom === null && el.open) el.close();
+  }, [zoom]);
 
   return (
     // --i staggers the entrance; the CSS removes it under reduced motion.
@@ -805,12 +892,12 @@ function Pick({ pick, index, chosen, status, busy, onChoose, onRemove }) {
         {pick.title} <span className="year">{pick.released?.slice(0, 4)}</span>
       </h2>
 
-      {(shots.length > 0 || pick.video) && (
+      {slides.length > 0 && (
         <div className="gallery">
-          {playing && pick.video ? (
+          {playing && current?.kind === "video" ? (
             <iframe
               className="gallery-video"
-              src={`${pick.video}?rel=0&autoplay=1`}
+              src={`${current.embed}?rel=0&autoplay=1`}
               title={`${pick.title} trailer`}
               allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
@@ -818,36 +905,167 @@ function Pick({ pick, index, chosen, status, busy, onChoose, onRemove }) {
             />
           ) : (
             <div className="gallery-frame">
-              {shots.length > 0 && (
-                <img src={shots[shown]} alt={`${pick.title} screenshot`} loading="lazy" />
+              {/* THE BARS EITHER SIDE OF BOX ART, FILLED.
+                  Box art is portrait and this frame is 16:9, so a cover sits in
+                  the middle with two dead slabs of background beside it. The
+                  frame cannot change shape per slide without the card jumping
+                  every time somebody clicks a thumbnail.
+                  So the slabs get filled with the cover itself — scaled up,
+                  blurred and darkened. The colour comes from the artwork, so it
+                  reads as a deliberate surround rather than as a picture that
+                  failed to fit. Nothing is cropped: the sharp copy on top is
+                  still whole. */}
+              {current?.kind === "cover" && (
+                <img className="frame-wash" src={current.src} alt="" aria-hidden="true" />
               )}
-              {/* The src is built server-side by youTubeUrl, which checks the id
-                  against YouTube's alphabet before it can reach an iframe. The
-                  value is written by a third party. */}
-              {pick.video && shown === 0 && (
+              {current && (
+                <img
+                  className={current.kind === "video" ? "frame-poster" : undefined}
+                  src={current.src}
+                  alt={
+                    current.kind === "cover" ? `${pick.title} cover art`
+                    : current.kind === "video" ? `${pick.title} trailer`
+                    : `${pick.title} screenshot`
+                  }
+                  loading="lazy"
+                  // A withdrawn or private video still has an id; YouTube then
+                  // serves nothing for it. Hiding the broken image leaves the
+                  // frame's own background and the play button, which is a worse
+                  // picture and still a working control.
+                  onError={e => { e.currentTarget.style.visibility = "hidden"; }}
+                />
+              )}
+              {/* A real button rather than an onClick on the image: the picture
+                  is the whole target, but a keyboard reaches this and a screen
+                  reader is told what it does. It sits above the picture in the
+                  frame's stack and below nothing — the trailer's own play
+                  button is on a different kind of slide and the two never
+                  appear together. */}
+              {current && current.kind !== "video" && (
+                <button
+                  type="button"
+                  className="frame-zoom"
+                  onClick={() => setZoom(shown)}
+                  aria-label={`Open ${current.kind === "cover" ? "the cover" : "this screenshot"} full size`}
+                >
+                  <span className="frame-zoom-badge" aria-hidden="true">⤢</span>
+                </button>
+              )}
+              {current?.kind === "video" && (
                 <button type="button" className="sheet-play" onClick={() => setPlaying(true)}>
                   <span aria-hidden="true">▶</span> Watch the trailer
                 </button>
               )}
             </div>
           )}
-          {shots.length > 1 && (
+          {slides.length > 1 && (
             <div className="strip">
-              {shots.map((s, i) => (
+              {slides.map((slide, i) => (
                 <button
-                  key={s}
+                  key={slide.src}
                   type="button"
-                  className={i === shown && !playing ? "thumb on" : "thumb"}
+                  className={[
+                    "thumb",
+                    i === shown && !playing ? "on" : "",
+                    // Box art is portrait in a 16:9 tile; the class switches it
+                    // to `contain` so it is letterboxed rather than cropped.
+                    slide.kind === "cover" ? "cover-thumb" : "",
+                  ].filter(Boolean).join(" ")}
                   onClick={() => { setShown(i); setPlaying(false); }}
-                  aria-label={`Screenshot ${i + 1} of ${shots.length}`}
+                  aria-label={
+                    slide.kind === "cover" ? "Cover art"
+                    : slide.kind === "video" ? "Trailer"
+                    : `Screenshot ${i + 1} of ${slides.length}`
+                  }
                 >
-                  <img src={s} alt="" loading="lazy" />
+                  {/* Same treatment as the big frame, for the same reason and
+                      one more. Box art is portrait in a 16:9 tile, so it sits in
+                      the middle with transparent bars either side — and the
+                      selected-state outline traces the TILE, not the picture.
+                      The result was an outline that looked misaligned against
+                      the artwork it was supposed to be marking.
+                      Filling the bars makes the tile a solid rectangle, so the
+                      outline has something to hug. */}
+                  {slide.kind === "cover" && (
+                    <img className="thumb-wash" src={slide.src} alt="" aria-hidden="true" />
+                  )}
+                  <img
+                    src={slide.src}
+                    alt=""
+                    loading="lazy"
+                    onError={e => { e.currentTarget.style.visibility = "hidden"; }}
+                  />
+                  {/* The badge is what makes a video tile readable as a video.
+                      Without it a trailer still is just another picture in the
+                      row, which is the thing this was asked to fix. */}
+                  {slide.kind === "video" && (
+                    <span className="thumb-play" aria-hidden="true">▶</span>
+                  )}
                 </button>
               ))}
             </div>
           )}
         </div>
       )}
+
+      {/* THE PICTURE, FULL SIZE.
+
+          One dialog per card. Three cards means three of these in the tree, and
+          at most one open — `showModal()` makes the rest of the page inert, so
+          there is no question of two at once.
+
+          Nothing here re-implements Escape, focus trapping or the backdrop. They
+          are the element's, and hand-rolling them is how a modal ends up
+          keyboard-inaccessible. */}
+      <dialog
+        ref={zoomRef}
+        className="lightbox"
+        aria-label={`${pick.title}, full size`}
+        onClose={() => setZoom(null)}
+        onClick={e => {
+          // A click landing on the dialog element itself is a click on the
+          // backdrop — the content sits in the figure inside it.
+          if (e.target === e.currentTarget) setZoom(null);
+        }}
+        onKeyDown={e => {
+          if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
+          if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
+        }}
+      >
+        {zoom !== null && slides[zoom] && (
+          <figure className="lightbox-figure">
+            <img
+              src={slides[zoom].src}
+              alt={slides[zoom].kind === "cover" ? `${pick.title} cover art` : `${pick.title} screenshot`}
+            />
+            {zoomable.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="lightbox-step prev"
+                  onClick={() => step(-1)}
+                  aria-label="Previous picture"
+                >‹</button>
+                <button
+                  type="button"
+                  className="lightbox-step next"
+                  onClick={() => step(1)}
+                  aria-label="Next picture"
+                >›</button>
+              </>
+            )}
+            <button
+              type="button"
+              className="lightbox-close"
+              onClick={() => setZoom(null)}
+              aria-label="Close"
+            >✕</button>
+            <figcaption>
+              {zoomable.indexOf(zoom) + 1} of {zoomable.length} · Escape to close
+            </figcaption>
+          </figure>
+        )}
+      </dialog>
 
       {/* The two blocks below are labelled because they come from different
           places and one of them is checkable. The argument is written by a
