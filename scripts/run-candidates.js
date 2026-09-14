@@ -6,22 +6,27 @@
  * not in that category or not on those platforms, nothing built on top of it can
  * be correct, and no prompt work will fix it.
  *
- *   node scripts/run-candidates.js action pc
- *   node scripts/run-candidates.js indie playstation,nintendo --tags cozy
- *   node scripts/run-candidates.js action pc --tags roguelike,difficult
- *   node scripts/run-candidates.js strategy pc --played 3498,4200
+ *   node scripts/run-candidates.js shooter pc
+ *   node scripts/run-candidates.js indie nintendo --tags co-operative
+ *   node scripts/run-candidates.js any playstation --machines ps5
+ *   node scripts/run-candidates.js strategy pc --played 1020
  *
  * Costs one to three catalogue requests. No model call, no OpenRouter spend.
  *
- * To find out whether several tags narrow or widen — which the catalogue does
- * not document — run it with one tag and then two, and compare the "catalogue
- * holds" line. If two tags give a smaller number than one, they are combined
- * with AND. If larger, OR.
+ * To find out whether several tags narrow or widen, run it with one tag and then
+ * two and compare the "catalogue holds" line. (Measured in turn 015 for IGDB:
+ * within a facet the ids are OR, across facets AND. `genres = (a,b)` gave 288
+ * and `genres = [a,b]` gave 11.)
+ *
+ * FIXED IN TURN 020, with `run-shortlist.js`. This imported `src/catalogue.js`
+ * — RAWG — and read the RAWG vocabularies, while the app went through
+ * `src/source.js` to IGDB. It ran without complaint and answered from the wrong
+ * catalogue. A tool that is quietly wrong is worse than one that is loudly
+ * broken, because only the second kind gets fixed.
  */
 
-import { assembleCandidates, dominanceReport } from "../src/catalogue.js";
-
-import { readData } from "../src/paths.js";
+import { assembleCandidates, dominanceReport } from "../src/source.js";
+import { buildRequest, describeVocabulary } from "./vocab.js";
 
 const args = process.argv.slice(2);
 
@@ -36,87 +41,48 @@ for (let i = 0; i < args.length; i++) {
   positional.push(args[i]);
 }
 
-const [categorySlug, platformArg] = positional;
-const tagArg = flag("tags");
 // `"".split(",")` is `[""]`, and `Number("")` is 0, which is an integer. Without
 // the filter for empty strings an absent --played flag produced playedIds=[0]
 // and an "excluded 1" line on every run. Harmless in effect — no game has id 0 —
 // but a count that lies about what the filter did is how a real one hides.
-const playedIds = (flag("played") || "")
-  .split(",")
-  .map(s => s.trim())
-  .filter(Boolean)
-  .map(Number)
-  .filter(Number.isInteger);
+const list = v => (v || "").split(",").map(x => x.trim()).filter(Boolean);
 
-if (!categorySlug || !platformArg) {
-  console.error("usage: node scripts/run-candidates.js <category|any> <platform,platform> [--tags a,b] [--played id,id]");
-  console.error("run scripts/pin-vocabularies.js and scripts/pin-tags.js first to see the valid values");
+const [categoryArg, familyArg] = positional;
+const machines = list(flag("machines"));
+const playedIds = list(flag("played")).map(Number).filter(Number.isInteger);
+
+if (!categoryArg || (!familyArg && machines.length === 0)) {
+  console.error("usage: node scripts/run-candidates.js <category|any> <family> [--machines a,b] [--tags a,b] [--played id,id]\n");
+  console.error(describeVocabulary());
   process.exit(1);
 }
 
-// "any" means no genre filter, the same as the dropdown's default.
-const category = categorySlug === "any" ? null : categorySlug;
-
-// --- resolve the vocabularies -----------------------------------------------
 // Slugs are checked against the pinned files rather than sent straight through.
-// A typo should fail here with a readable message, not reach the catalogue and
-// come back as an empty pool that looks like a thin filter.
-
-// A platform argument may name families ("playstation") or machines
-// ("playstation5"). Naming any machine puts the whole request into machine mode,
-// because the two are different catalogue parameters and are never sent
-// together — see buildPoolQuery.
-let platformIds, specific = false;
+// A typo fails here with a readable message instead of reaching the catalogue
+// and coming back as an empty pool that looks like a thin filter.
+let request;
 try {
-  const pinned = JSON.parse(readData("data/platforms.json"));
-  const familyId = new Map(pinned.platforms.map(p => [p.slug, p.id]));
-  const familyChildren = new Map(pinned.platforms.map(p => [p.slug, (p.platforms || []).map(c => c.id)]));
-  const machineId = new Map(pinned.platforms.flatMap(p => (p.platforms || []).map(c => [c.slug, c.id])));
-
-  const wanted = platformArg.split(",").map(s => s.trim());
-  const missing = wanted.filter(s => !familyId.has(s) && !machineId.has(s));
-  if (missing.length) {
-    console.error(`Unknown platform: ${missing.join(", ")}`);
-    console.error(`Families: ${[...familyId.keys()].join(", ")}`);
-    console.error(`Run scripts/pin-vocabularies.js if the machine names are missing.`);
-    process.exit(1);
-  }
-
-  specific = wanted.some(s => machineId.has(s) && !familyId.has(s));
-  platformIds = specific
-    ? [...new Set(wanted.flatMap(s =>
-        machineId.has(s) ? [machineId.get(s)] : (familyChildren.get(s) ?? [])))]
-    : wanted.map(s => familyId.get(s));
+  request = buildRequest({
+    // "any" means no genre filter, the same as the dropdown's default.
+    category: categoryArg === "any" ? null : categoryArg,
+    family: machines.length ? null : familyArg,
+    machines,
+    tags: list(flag("tags")),
+  });
 } catch (e) {
-  console.error(`Could not read data/platforms.json — run scripts/pin-vocabularies.js first.\n${e.message}`);
+  console.error(`${e.message}\n`);
+  console.error(describeVocabulary());
   process.exit(1);
 }
 
-let vocabulary = null;
-let tagSlugs = [];
-try {
-  const pinned = JSON.parse(readData("data/tags.json"));
-  vocabulary = new Set(pinned.facets.flatMap(f => f.tags.map(t => t.slug)));
-  if (tagArg) {
-    tagSlugs = tagArg.split(",").map(s => s.trim()).filter(Boolean);
-    const missing = tagSlugs.filter(s => !vocabulary.has(s));
-    if (missing.length) {
-      console.error(`Not in the pinned tag vocabulary: ${missing.join(", ")}`);
-      console.error(`\nA tag not in data/tags.json is one this product cannot offer.`);
-      console.error(`Add it to data/tag-candidates.json and re-run scripts/pin-tags.js`);
-      console.error(`rather than passing it through untested.`);
-      process.exit(1);
-    }
-  }
-} catch (e) {
-  if (tagArg) {
-    console.error(`Could not read data/tags.json — run scripts/pin-tags.js first.\n${e.message}`);
-    process.exit(1);
-  }
-  // No tags requested and no vocabulary pinned: proceed, keeping every raw tag.
-  console.error("note: data/tags.json missing, so candidate tags are unfiltered noise.\n");
-}
+const { categorySlug: category, machineSlugs, tagSlugs, selectionSlugs, specific } = request;
+
+// `specific` decides which field the platform verification below reads. A family
+// request must be checked against `c.platforms` (families) and a machine request
+// against `c.machines`; reading the wrong one would let every candidate look
+// off-platform, or every candidate look fine. Criteria 3 and 4 depend on it, so
+// it is destructured here rather than recomputed.
+const platformArg = selectionSlugs.join(",");
 
 // --- run ---------------------------------------------------------------------
 
@@ -125,11 +91,10 @@ let result;
 try {
   result = await assembleCandidates({
     categorySlug: category,
-    platformIds,
-    specific,
+    machineSlugs,
     tagSlugs,
-    vocabulary,
     playedIds,
+    libraryEntries: null,
   });
 } catch (e) {
   // Criterion 13: a catalogue failure must be legible as a catalogue failure.
@@ -159,7 +124,7 @@ for (const c of candidates) {
   console.log(
     `         ${c.released ?? "unreleased"}  ` +
     `${c.ratingCount} ratings  ` +
-    `${c.metacritic ?? "--"} metacritic`
+    `${c.criticScore ?? "--"} critic score`
   );
   console.log(`         platforms: ${c.platforms.join(", ")}`);
   if (specific) console.log(`         machines: ${c.machines.join(", ")}`);
@@ -203,20 +168,22 @@ if (tagSlugs.length) {
 
 // --- tag dominance ------------------------------------------------------------
 
-if (vocabulary) {
-  const d = dominanceReport(candidates);
-  console.log(`\n--- tag dominance (turn 005 finding) ---`);
-  console.log(`mean vocabulary tags per candidate: ${d.meanTagsPerCandidate}`);
-  console.log(`most-tagged in this pool:`);
-  for (const m of d.mostTagged) {
-    console.log(`  ${String(m.tagCount).padStart(3)} tags  ${String(m.ratingCount).padStart(6)} ratings  ${m.title}`);
-  }
-  console.log(
-    `\nThese are the candidates most likely to reappear under unrelated filters.\n` +
-    `If the same titles top this list for cozy, roguelike and horror alike, tags\n` +
-    `widen the filter space far less than 51 words suggests.`
-  );
+// The old `if (vocabulary)` guard is gone with the RAWG vocabulary loader it
+// tested. Under IGDB the vocabularies are mandatory — `scripts/vocab.js` throws
+// if `data/tags.igdb.json` is missing — so the report always runs. A condition
+// that is now always true is not a guard, it is a line that reads like one.
+const d = dominanceReport(candidates);
+console.log(`\n--- tag dominance (turn 005 finding) ---`);
+console.log(`mean vocabulary tags per candidate: ${d.meanTagsPerCandidate}`);
+console.log(`most-tagged in this pool:`);
+for (const m of d.mostTagged) {
+  console.log(`  ${String(m.tagCount).padStart(3)} tags  ${String(m.ratingCount).padStart(6)} ratings  ${m.title}`);
 }
+console.log(
+  `\nThese are the candidates most likely to reappear under unrelated filters.\n` +
+  `If the same titles top this list for cozy, roguelike and horror alike, tags\n` +
+  `widen the filter space far less than the vocabulary's size suggests.`
+);
 
 if (candidates.length < 8) {
   console.log(

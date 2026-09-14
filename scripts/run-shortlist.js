@@ -1,26 +1,41 @@
 /**
  * The whole pipeline from the command line. Filter, candidate set, one model call.
  *
- *   node scripts/run-shortlist.js action pc
- *   node scripts/run-shortlist.js action pc --tags roguelike,difficult
- *   node scripts/run-shortlist.js card linux
- *   node scripts/run-shortlist.js indie nintendo --tags cozy --played 28121
+ *   node scripts/run-shortlist.js shooter pc
+ *   node scripts/run-shortlist.js shooter pc --tags co-operative
+ *   node scripts/run-shortlist.js --any nintendo --machines switch
+ *   node scripts/run-shortlist.js adventure playstation --played 1020
  *
  * Costs one to three catalogue requests and one model call — about half a cent.
  * A failed gate costs two calls, because the response is retried once.
+ *
+ * FIXED IN TURN 020. This script imported `src/catalogue.js` directly — the RAWG
+ * module — and read `data/platforms.json` and `data/tags.json`, the RAWG
+ * vocabularies, while the app went through `src/source.js` to IGDB. It had done
+ * so since the migration.
+ *
+ * It did not crash. With a RAWG key still in the environment it ran happily and
+ * printed a correct-looking shortlist drawn from a catalogue the product no
+ * longer uses — which is worse than crashing, and is why "it still works" was
+ * never evidence of anything.
+ *
+ * `src/source.js` says everything in the project imports from it rather than
+ * from either module. That sentence was false for this file and for
+ * `run-candidates.js` for five turns.
  */
 
-import { assembleCandidates } from "../src/catalogue.js";
+import { assembleCandidates } from "../src/source.js";
+import { buildRequest, describeVocabulary } from "./vocab.js";
 import { shortlist } from "../src/shortlist.js";
 import { createBudget } from "../src/budget.js";
 import { config } from "../src/config.js";
-import { readData } from "../src/paths.js";
 
 const args = process.argv.slice(2);
 const flag = name => {
   const i = args.indexOf(`--${name}`);
   return i === -1 ? null : (args[i + 1] || "");
 };
+const has = name => args.includes(`--${name}`);
 
 const positional = [];
 for (let i = 0; i < args.length; i++) {
@@ -28,51 +43,48 @@ for (let i = 0; i < args.length; i++) {
   positional.push(args[i]);
 }
 
-const [categorySlug, platformArg] = positional;
-const tagArg = flag("tags");
-const playedIds = (flag("played") || "")
-  .split(",").map(s => s.trim()).filter(Boolean).map(Number).filter(Number.isInteger);
+const list = v => (v || "").split(",").map(x => x.trim()).filter(Boolean);
 
-if (!categorySlug || !platformArg) {
-  console.error("usage: node scripts/run-shortlist.js <category> <platform,platform> [--tags a,b] [--played id,id]");
+const [categoryArg, familyArg] = positional;
+const machines = list(flag("machines"));
+const playedIds = list(flag("played")).map(Number).filter(Number.isInteger);
+
+if (!familyArg && machines.length === 0) {
+  console.error("usage: node scripts/run-shortlist.js <category|--any> <family> [--machines a,b] [--tags a,b] [--played id,id]\n");
+  console.error(describeVocabulary());
   process.exit(1);
 }
 
-// --- resolve vocabularies, same as run-candidates -----------------------------
-
-let platformIds, platformSlugs, vocabulary, tagSlugs = [];
+let request;
 try {
-  const pinned = JSON.parse(readData("data/platforms.json"));
-  const bySlug = new Map(pinned.platforms.map(p => [p.slug, p.id]));
-  platformSlugs = platformArg.split(",").map(s => s.trim());
-  const missing = platformSlugs.filter(s => !bySlug.has(s));
-  if (missing.length) {
-    console.error(`Unknown platform slug: ${missing.join(", ")}`);
-    process.exit(1);
-  }
-  platformIds = platformSlugs.map(s => bySlug.get(s));
-
-  const tagFile = JSON.parse(readData("data/tags.json"));
-  vocabulary = new Set(tagFile.facets.flatMap(f => f.tags.map(t => t.slug)));
-  if (tagArg) {
-    tagSlugs = tagArg.split(",").map(s => s.trim()).filter(Boolean);
-    const bad = tagSlugs.filter(s => !vocabulary.has(s));
-    if (bad.length) {
-      console.error(`Not in the pinned tag vocabulary: ${bad.join(", ")}`);
-      process.exit(1);
-    }
-  }
+  request = buildRequest({
+    // `--any` is a real request meaning "any kind of game", not a missing value.
+    category: has("any") ? null : (categoryArg ?? null),
+    family: machines.length ? null : familyArg,
+    machines,
+    tags: list(flag("tags")),
+  });
+  request.playedIds = playedIds;
 } catch (e) {
-  console.error(`Run scripts/pin-vocabularies.js and scripts/pin-tags.js first.\n${e.message}`);
+  console.error(`${e.message}\n`);
+  console.error(describeVocabulary());
   process.exit(1);
 }
+
+// Only what this file needs by name. The full `request` object goes to
+// shortlist() untouched — it carries platformSlugs, selectionSlugs and specific,
+// which describeRequest and the platform gate both read.
+const { categorySlug, machineSlugs, tagSlugs } = request;
 
 // --- steps 1 and 2 ------------------------------------------------------------
 
 let assembled;
 try {
   assembled = await assembleCandidates({
-    categorySlug, platformIds, tagSlugs, vocabulary, playedIds,
+    categorySlug, machineSlugs, tagSlugs, playedIds,
+    // Carried so the exclusion refuses to run across catalogues rather than
+    // silently matching nothing — see db/migration-004-library-source.sql.
+    libraryEntries: null,
   });
 } catch (e) {
   console.error(e.kind === "catalogue" ? `CATALOGUE FAILURE: ${e.message}` : e);
@@ -85,7 +97,6 @@ if (tagSlugs.length > 1) console.log(`${query.fullMatches} carry all ${tagSlugs.
 
 // --- step 3 -------------------------------------------------------------------
 
-const request = { categorySlug, platformSlugs, tagSlugs };
 const budget = createBudget(config.maxCallsPerRequest);
 
 if (candidates.length === 0) {
@@ -134,7 +145,7 @@ for (const p of result.picks) {
     console.log(`   ${n.tag}: ${n.how}`);
   }
   if (p.tagNotes?.length) console.log("");
-  console.log(`   id ${p.id} · ${p.platforms.join(", ")} · ${p.metacritic ?? "--"} metacritic · ${p.ratingCount} ratings`);
+  console.log(`   id ${p.id} · ${p.platforms.join(", ")} · ${p.criticScore ?? "--"} critic score · ${p.ratingCount} ratings`);
   console.log(`   tags: ${p.tags.join(", ") || "none"}`);
   console.log(`   image: ${p.image ?? "none"}`);
   console.log("");
