@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "check": "node scripts/check-catalogue.js && node scripts/check-platforms.js && node scripts/check-shortlist.js && node scripts/check-library.js && node scripts/check-detail.js && node scripts/check-igdb.js && node scripts/check-igdb-catalogue.js && node scripts/check-deals.js && node scripts/check-events.js && node scripts/check-suggested.js && node scripts/check-css.js",
+    "check": "node scripts/check-catalogue.js && node scripts/check-platforms.js && node scripts/check-shortlist.js && node scripts/check-library.js && node scripts/check-detail.js && node scripts/check-igdb.js && node scripts/check-igdb-catalogue.js && node scripts/check-deals.js && node scripts/check-events.js && node scripts/check-suggested.js && node scripts/check-css.js && node scripts/check-undefined.js",
     "check:catalogue": "node scripts/check-catalogue.js",
     "check:platforms": "node scripts/check-platforms.js",
     "check:shortlist": "node scripts/check-shortlist.js",
@@ -40,7 +40,8 @@
     "probe:reviews": "node scripts/probe-reviews.js",
     "check:css": "node scripts/check-css.js",
     "case:5": "node scripts/case-5-injection.js",
-    "case:6": "node scripts/case-6-repeatability.js"
+    "case:6": "node scripts/case-6-repeatability.js",
+    "check:undefined": "node scripts/check-undefined.js"
   },
   "engines": {
     "node": ">=18"
@@ -53,6 +54,8 @@
   },
   "devDependencies": {
     "vite": "^5.4.0",
-    "@vitejs/plugin-react": "^4.3.1"
+    "@vitejs/plugin-react": "^4.3.1",
+    "acorn": "^8.18.0",
+    "acorn-walk": "^8.3.5"
   }
 }
