@@ -135,7 +135,7 @@ why I chose it. Ask.
 
 ## Failures seen before
 
-Twenty-eight of them, in `docs/failures.md`. **Read it before writing code.**
+Thirty-two of them, in `docs/failures.md`. **Read it before writing code.**
 
 They moved out of this file in turn 016, when it passed 250 lines against the 200
 the course asks for. Nothing was cut. The four that come up most often:

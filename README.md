@@ -47,7 +47,7 @@ classification. The model is never asked for any of them.
 |---|---|
 | `CLAUDE.md` | The agent's standing brief. Read first. |
 | `docs/spec.md` | The specification, v3.1. The authority on what gets built. |
-| `docs/failures.md` | Twenty-eight failures seen in this project, one line each. |
+| `docs/failures.md` | Thirty-two failures seen in this project, one line each. |
 | `docs/architecture.md` | How the parts fit together, with diagrams. Start here after the spec. |
 | `docs/decisions/` | One file per decision that could have gone another way. |
 | `docs/turns/` | One record per turn of work. 001 to 020, and [there is no 008](#the-missing-008). |

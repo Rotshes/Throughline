@@ -151,3 +151,26 @@ cut; it moved. This is where most of the value in that file was.
   harmless only because the failing copy was its first statement; as its last, it
   would have left a mutated source on disk under a success message. Restores are
   verified byte for byte, not announced. (Turn 019)
+
+* **A gap in the record is answered, not filled.** Asked to write the missing turn
+  008, the right move was to establish that no such file had ever been committed
+  and say so in the README. `git log --all --diff-filter=A` settled it in one
+  command: the number was skipped between two spirals on the same day. A
+  backdated record in a repository graded on its record is worse than a skipped
+  integer. (Turn 021)
+* **A stacking bug and a dead click handler report identically.** Adding a
+  `z-index` to a picture put it over a button that had none — `auto` loses to
+  `1` — hiding the control and swallowing its clicks. Nothing threw, the layout
+  was fine, and the symptom was "the button does nothing", which sends you
+  straight to the handler. When a control stops working after a purely visual
+  change, check the stack before the code. (Turn 021)
+* **A fix applied to one element is not applied to its twin.** Box art was
+  letterboxed in both the main frame and the thumbnail. The frame was fixed; the
+  thumbnail was not, one step apart, by the same author — and the symptom there
+  read as a misaligned outline rather than as the same bug. After fixing a shape
+  problem, grep for every other place that shape appears. (Turn 021)
+* **Removing something from HEAD does not unpublish it.** A URL taken out of the
+  README remained in two records that are never edited, and in the git history of
+  a public repository. Obscurity is not a bound. Where the exposure is spend, the
+  bound is a spend cap; where it is disclosure, deleting the current copy changes
+  who reads it and not whether it exists. (Turn 021)

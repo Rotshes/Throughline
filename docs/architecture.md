@@ -195,7 +195,7 @@ once there is more than one service and a user has to say which one broke.
 
 1. `CLAUDE.md` — the standing brief
 2. `docs/spec.md` — the specification, v3.1
-3. `docs/failures.md` — twenty-eight failures, one line each. **Most of the value
+3. `docs/failures.md` — thirty-two failures, one line each. **Most of the value
    in this repository is here.**
 4. `docs/decisions/` — the forks that could have gone another way
 5. This file
