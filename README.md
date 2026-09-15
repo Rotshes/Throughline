@@ -64,21 +64,6 @@ classification. The model is never asked for any of them.
 | `scripts/case-*.js` | Reference cases from `docs/spec.md` part 4. These cost model calls. |
 | `logs/model-calls.jsonl` | Local call log. The durable copy is in Supabase. |
 
-### The missing 008
-
-There is no `docs/turns/008`. The number was skipped, not the record.
-
-`git log --all --diff-filter=A -- "docs/turns/008*"` returns nothing: no file by
-that name has ever been committed. Turn 007 closes "spiral turn 2, third of
-three" and turn 009 opens "spiral turn 3", both dated 2026-09-11, with no work
-between them.
-
-Stated here because a gap in a numbered sequence invites the question, and the
-answer is duller than the gap looks. Writing a turn 008 after the fact would have
-been the wrong fix twice over: `CLAUDE.md` requires records to be written during
-the turn, and a backdated record in a repository graded on its record is worse
-than a skipped integer.
-
 ### Files kept because they were true when written
 
 `prompts/analysis.md`, `prompts/matching.md`, `prompts/preferences.md`,
@@ -114,26 +99,6 @@ node scripts/run-candidates.js any nintendo --machines switch --tags co-operativ
 Both refuse any slug that is not in the pinned vocabularies and print the whole
 list when you get one wrong. That guard exists because three slugs in this
 project were typed from memory and all three were wrong.
-
-## State
-
-**Turn 20.** IGDB as the catalogue, IsThereAnyDeal for prices, one model call per
-request, a shared library, and a front page of four rows.
-
-Three external services and six secrets. Each service has its own failure `kind`,
-so a user can tell which one broke.
-
-### Known and unfixed, all recorded
-
-- **No rate limiting** on `/api/shortlist`, `/api/deals` or `/api/event`. The
-  deployed endpoints spend OpenRouter credit for anyone who finds them. Exposure
-  is bounded only by the prepaid balance.
-- **Seven of nine reference cases have never been run.** Cases 5 and 6 were run
-  in turn 019 and both turned out to be wrong about the software — case 5 tested
-  catalogue descriptions, which never enter a prompt. Case 4 is the one the
-  specification says to design most carefully and it is still unrun.
-- **`MIN_GAMES = 600`** in `scripts/pin-igdb-tags.js` currently excludes nothing.
-  Kept as a guard; recorded as inert rather than left looking load-bearing.
 
 ## The measurements this project rests on
 
